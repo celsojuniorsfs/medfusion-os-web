@@ -4,9 +4,9 @@
 > Vocabulário e decisões de negócio em [`CONTEXT.md`](../CONTEXT.md). Contrato da API em
 > [`medfusion-os-api/docs/openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/openapi.yaml).
 >
-> **Atualizado em 07/09/2026** com as correções da validação de escopo feita com o cliente
-> (áudio via WhatsApp) — ver `CONTEXT.md` § Validação com o cliente. Os pontos marcados
-> **[proposto]** ainda não têm confirmação fechada.
+> **Atualizado em 07/09/2026** com as correções das duas rodadas de validação de escopo feitas
+> com o cliente (áudio via WhatsApp) — ver `CONTEXT.md` § Validação com o cliente. Todos os
+> pontos já têm confirmação fechada, incluindo o fluxo de status.
 
 ## Dentro da v1
 
@@ -23,7 +23,7 @@
 - **Numeração sequencial** da OS, auto-sugerida a partir de **1336**, editável pelo técnico. O
   bloco físico de papel deixa de ser usado assim que o sistema entrar em operação.
 - **Status da OS**: acompanhamento do ciclo de vida, incluindo a reabertura por garantia/retrabalho
-  (ver seção própria abaixo — fluxo ampliado **[proposto]**).
+  e o status `nao_aprovado` para orçamentos sem retorno do cliente (ver seção própria abaixo).
 - **PDF da OS**: geração e download, fiel ao layout da planilha atual.
 - **Notificação automática**: ao registrar a OS, uma cópia do PDF é enviada automaticamente ao
   cliente por e-mail e por WhatsApp.
@@ -64,7 +64,7 @@ Notas sobre campos que não estavam explícitos no controle manual:
   opcional.
 - **`status`** — não existe na planilha (o controle de andamento hoje é informal), mas várias
   telas do backlog já dependem dele (listagem com filtro por status, endpoint de atualização de
-  status). Ver ciclo de vida abaixo — fluxo ampliado na validação de 07/09/2026, **[proposto]**.
+  status). Ver ciclo de vida abaixo — fluxo ampliado nas duas rodadas de validação de 07/09/2026.
 - **`pdf_path` / `pdf_generated_at`** — o PDF é gerado sob demanda e guardado no Object Storage do
   Laravel Cloud (ver [`ambientes.md`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/ambientes.md)
   no repo da API); esses campos guardam a referência e a data da última geração.
@@ -148,29 +148,38 @@ Formato Dado / Quando / Então para o comportamento que decide implementação:
 - **Dado** os cinco checkboxes de tipo de atendimento, **então** qualquer combinação é válida,
   incluindo nenhum marcado — são independentes entre si, como na planilha atual.
 
-### Status da OS **[proposto — aguardando confirmação do cliente]**
+### Status da OS
 
-Fluxo ampliado a partir da validação de 07/09/2026 (o cliente mencionou "aguardando aprovação",
-"em análise", "orçamento externo" e o retrabalho de garantia; a confirmação exata do desenho
-abaixo ainda não fechou):
+Fluxo fechado após as duas rodadas de validação de 07/09/2026 (o cliente mencionou "aguardando
+aprovação", "em análise", "orçamento externo", o retrabalho de garantia, e — na segunda rodada —
+a necessidade de medir separadamente orçamentos que ficam sem resposta do cliente):
 
 ```
 aberta → em_analise → orcamento_externo (opcional, quando terceirizado) → aguardando_aprovacao
        → aprovada → concluida
 cancelada: alcançável a partir de aberta, em_analise, orcamento_externo ou aguardando_aprovacao
+nao_aprovado: só a partir de aguardando_aprovacao — orçamento que ficou sem retorno do cliente
+              por tempo suficiente; mudança manual do técnico, sem prazo automático. Distinto de
+              `cancelada`: aqui o cliente simplesmente não se posicionou, não decidiu que não
+              queria mais o serviço.
 garantia: reabertura especial, só a partir de concluida, dentro do prazo de garantia — depois
-          volta a fluir para concluida. É a MESMA OS (não cria uma nova) — serve para o cliente
+          volta a fluir para concluida. É a MESMA OS (não cria uma nova) — serve para a empresa
           medir quantos retrabalhos aconteceram num período.
 ```
 
 - **Dado** uma OS recém-criada, **então** seu status inicial é `aberta`.
 - **Dado** uma OS em `aberta`, `em_analise`, `orcamento_externo` ou `aguardando_aprovacao`,
   **então** pode ser cancelada.
+- **Dado** uma OS em `aguardando_aprovacao` sem retorno do cliente, **então** o técnico pode
+  marcá-la manualmente como `nao_aprovado` — não há reabertura desse estado, mas o histórico
+  continua consultável normalmente (ver critério de PDF/consulta abaixo).
 - **Dado** uma OS `concluida` dentro do prazo de garantia, **quando** o equipamento volta com
   retrabalho, **então** o técnico reabre a **mesma OS** com status `garantia` (não cria uma OS
   nova); ao terminar o retrabalho, volta para `concluida`.
-- **Dado** uma OS `concluida` fora do prazo de garantia, ou `cancelada`, **então** nenhuma
-  transição é permitida — são os únicos estados realmente finais.
+- **Dado** uma OS `concluida` fora do prazo de garantia, `cancelada` ou `nao_aprovado`, **então**
+  nenhuma transição é permitida — são os únicos estados realmente finais. Nenhum deles impede a
+  consulta aos dados da OS depois — o técnico pode reabrir a tela de visualização (nunca o
+  status) para reaproveitar os dados num contato futuro do cliente.
 
 ### PDF e notificação automática
 

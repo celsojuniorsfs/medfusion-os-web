@@ -44,14 +44,19 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
   100–200 modelos diferentes (um por tipo de equipamento/finalidade/parâmetro de análise) e vai
   enviá-los para quando a emissão automática entrar em desenvolvimento.
 - **Status da OS** — campo sem equivalente na planilha (o controle de andamento hoje é
-  informal), introduzido na v1 porque o backlog já depende dele. **[proposto — aguardando
-  confirmação do cliente, validação de 07/09/2026]** Fluxo ampliado:
+  informal), introduzido na v1 porque o backlog já depende dele. Fluxo fechado nas duas rodadas
+  de validação de 07/09/2026:
   `aberta` → `em_analise` → `orcamento_externo` (opcional, quando enviado a terceiro para
   avaliação) → `aguardando_aprovacao` → `aprovada` → `concluida`; `cancelada` alcançável a
-  partir de qualquer estado anterior a `aprovada`. `garantia` é uma reabertura especial: só a
+  partir de qualquer estado anterior a `aprovada`. `nao_aprovado` é distinto de `cancelada`: só
+  alcançável a partir de `aguardando_aprovacao`, para quando o orçamento fica sem retorno do
+  cliente por tempo suficiente (mudança manual do técnico, sem prazo automático) — o cliente quis
+  medir isso separado de um cancelamento por decisão. `garantia` é uma reabertura especial: só a
   partir de `concluida`, dentro do prazo de garantia, quando o mesmo equipamento volta com
   retrabalho — reabre a **mesma OS** (não cria uma nova) e depois volta a fluir para `concluida`.
-  Serve para a empresa medir quantos retrabalhos aconteceram num período.
+  Serve para a empresa medir quantos retrabalhos aconteceram num período. Nenhum estado final
+  impede consultar os dados da OS depois (ex.: cliente liga meses depois perguntando por um
+  orçamento cancelado ou não aprovado) — só o status em si não retrocede.
 - **Notificação automática** — a partir da validação: ao registrar a OS, o sistema envia
   automaticamente uma cópia do PDF ao cliente por e-mail e por WhatsApp.
 - **Observação** — campo de texto livre da OS, visto no exemplo real (`"Orçamento apenas de
@@ -79,7 +84,7 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
 | Contrato da API | `openapi.yaml` escrito à mão (spec-first), em `medfusion-os-api/docs/` |
 | Equipamentos por OS | Corrigido 07/09/2026: sem limite (era "até 2"); catálogo reaproveitável por cliente |
 | Valor de peça | Corrigido 07/09/2026: opcional (era "sempre obrigatório"); novo campo `valor_mao_obra` |
-| Status da OS | Ampliado 07/09/2026 (8 estados, com reabertura por garantia) — **proposto, aguardando confirmação** |
+| Status da OS | Ampliado e fechado 07/09/2026 (9 estados, com reabertura por garantia e `nao_aprovado` distinto de `cancelada`) |
 | Notificação | Novo 07/09/2026: envio automático do PDF por e-mail e WhatsApp na criação da OS |
 | Bloco físico de OS | Confirmado 07/09/2026: descontinuado assim que o sistema entrar em operação |
 
@@ -87,10 +92,11 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
 
 O escopo da v1 foi apresentado ao cliente numa rodada de mensagens de WhatsApp (linguagem de
 negócio, sem termos técnicos), cobrindo a jornada da OS, o que o sistema faz, o que fica para
-depois e 5 pontos em aberto. O cliente respondeu por áudio. Nenhum ponto ficou sem resposta; as
-correções e novidades levantadas estão registradas nos itens do glossário acima e na tabela de
-decisões. Resumo do que mudou em relação ao que estava fechado antes dessa rodada:
+depois e 5 pontos em aberto. O cliente respondeu por áudio, em duas rodadas. Nenhum ponto ficou
+sem resposta; as correções e novidades levantadas estão registradas nos itens do glossário acima
+e na tabela de decisões.
 
+**Rodada 1** — resumo do que mudou em relação ao que estava fechado antes:
 - **Corrigido**: limite de equipamentos por OS (era 2, agora sem limite) e obrigatoriedade do
   valor da peça (agora opcional, com `valor_mao_obra` como campo novo).
 - **Confirmado sem mudança**: PAT opcional, certificados e custos internos seguem fora da v1,
@@ -98,8 +104,16 @@ decisões. Resumo do que mudou em relação ao que estava fechado antes dessa ro
 - **Novo pedido de escopo**: catálogo de equipamentos reaproveitável por cliente; notificação
   automática da OS por e-mail e WhatsApp — os dois entram na v1 (WhatsApp via API oficial do
   WhatsApp Cloud da Meta, o que exige verificação de conta comercial pelo cliente).
-- **Ainda em aberto**: o fluxo de status ampliado foi montado a partir do que o cliente descreveu,
-  mas a confirmação exata do desenho ainda não fechou — segue uma segunda rodada de validação.
+- **Deixado em aberto**: o fluxo de status ampliado foi montado a partir do que o cliente
+  descreveu, mas a confirmação exata do desenho ainda não tinha fechado.
+
+**Rodada 2** — fechou o único ponto em aberto (status):
+- Cliente confirmou que **nunca precisou reabrir** uma OS `cancelada` — a necessidade real é só
+  poder **consultar** o histórico depois (já coberto, a consulta não depende do status).
+- Identificou que `cancelada` misturava dois motivos diferentes: cliente que não quer mais o
+  serviço, e orçamento que fica meses sem resposta. Pediu para medir esse segundo caso à parte —
+  daí o novo status `nao_aprovado` (só a partir de `aguardando_aprovacao`, manual).
+- Com essa adição, o fluxo de status está **fechado** — ver `escopo-v1.md` § Status da OS.
 
 Decisões detalhadas e critérios de aceite: [`medfusion-os-web/docs/escopo-v1.md`](./docs/escopo-v1.md),
 [`medfusion-os-api/docs/openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/openapi.yaml)
