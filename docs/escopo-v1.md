@@ -4,7 +4,7 @@
 > Vocabulário e decisões de negócio em [`CONTEXT.md`](../CONTEXT.md). Contrato da API em
 > [`medfusion-os-api/docs/openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/openapi.yaml).
 >
-> **Atualizado em 07/09/2026** com as correções das duas rodadas de validação de escopo feitas
+> **Atualizado em 07/09/2026** com as correções de três rodadas de validação de escopo feitas
 > com o cliente (áudio via WhatsApp) — ver `CONTEXT.md` § Validação com o cliente. Todos os
 > pontos já têm confirmação fechada, incluindo o fluxo de status.
 
@@ -15,6 +15,10 @@
 - **Clientes**: CRUD completo, listagem paginada com busca por razão social/CNPJ.
 - **Catálogo de equipamentos por cliente**: cada equipamento é cadastrado uma vez no cliente e
   reaproveitado nas próximas OS's — não se redigita a cada atendimento (ver nota abaixo).
+- **Histórico de OS por equipamento**: tela dedicada no cadastro do equipamento, listando as
+  OS's anteriores daquele equipamento específico (data, status, valores). Serve de referência de
+  preço — ex.: "esse valor já foi recusado nesse equipamento antes" — para clientes que têm mais
+  de uma unidade do mesmo equipamento (ver critério de aceite abaixo).
 - **Ordens de Serviço**: criação, edição, listagem (com filtros) e visualização, espelhando o
   formulário atual em Excel — dados do cliente, tipo de atendimento, **qualquer quantidade de
   equipamentos** (não mais limitado a 2), defeito apresentado, manutenção a aplicar, observação,
@@ -142,6 +146,22 @@ Formato Dado / Quando / Então para o comportamento que decide implementação:
 - **Dado** um cliente com equipamentos já cadastrados, **quando** o técnico abre uma nova OS para
   esse cliente, **então** ele pode escolher entre os equipamentos já cadastrados ou cadastrar um
   novo — que fica salvo no catálogo do cliente para a próxima OS.
+
+### Histórico do equipamento
+
+Confirmado na terceira rodada de validação: o cliente usa OS's `nao_aprovado` (e demais status)
+como referência de preço quando volta a orçar o mesmo equipamento — clientes costumam ter mais de
+uma unidade do mesmo modelo, e ver o que já foi recusado antes ajuda a calibrar o próximo
+orçamento.
+
+- **Dado** um equipamento do catálogo de um cliente, **quando** o técnico abre a tela de
+  histórico desse equipamento, **então** vê a lista de OS's anteriores **daquele equipamento
+  específico** (mesmo `equipment_id`/nº de série) com data, status e valores (peça e mão de
+  obra).
+- **Dado** um equipamento sem nenhuma OS anterior, **então** a tela de histórico mostra que não
+  há registros — não é um erro.
+- Fora do escopo por ora: agrupar histórico por modelo/marca entre unidades diferentes do mesmo
+  cliente (o pedido foi sobre o mesmo equipamento, não sobre "equipamentos parecidos").
 
 ### Tipo de atendimento
 

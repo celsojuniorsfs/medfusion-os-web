@@ -28,6 +28,11 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
 - **PAT** — número de patrimônio do equipamento no cliente. Confirmado opcional na validação:
   só costuma ser preenchido em clientes com controle de patrimônio ativo (prefeituras,
   hospitais); na maioria dos atendimentos fica em branco.
+- **Histórico do equipamento** — confirmado na terceira rodada de validação: o cliente usa o
+  histórico de OS's de um equipamento (inclusive as `nao_aprovado`) como referência de preço ao
+  orçar novamente o mesmo equipamento — comum quando o cliente tem mais de uma unidade do mesmo
+  modelo. Não é para reabrir nada; `nao_aprovado` e `cancelada` nunca se convertem um no outro.
+  Vira tela dedicada na v1 (ver `escopo-v1.md` § Histórico do equipamento).
 - **N/S** — número de série do equipamento.
 - **Peças de reposição** — tabela de Quantidade / Descrição / Valor usada no orçamento
   apresentado ao cliente. Distinta do custo interno da peça (ver CUSTOS). Confirmado na validação:
@@ -114,6 +119,14 @@ e na tabela de decisões.
   serviço, e orçamento que fica meses sem resposta. Pediu para medir esse segundo caso à parte —
   daí o novo status `nao_aprovado` (só a partir de `aguardando_aprovacao`, manual).
 - Com essa adição, o fluxo de status está **fechado** — ver `escopo-v1.md` § Status da OS.
+
+**Rodada 3** — explicou o motivo de guardar `nao_aprovado`:
+- `nao_aprovado` e `cancelada` **nunca** se convertem um no outro — não é sobre reabrir, é sobre
+  guardar referência de preço. Exemplo dele: clientes costumam ter mais de uma unidade do mesmo
+  equipamento; ao orçar de novo, ele quer ver se aquele valor já foi recusado antes naquele
+  equipamento específico — usa como perfil do cliente.
+- Decisão: vira uma **tela de histórico dedicada** no cadastro do equipamento (não só dado
+  consultável por filtro) — ver `escopo-v1.md` § Histórico do equipamento.
 
 Decisões detalhadas e critérios de aceite: [`medfusion-os-web/docs/escopo-v1.md`](./docs/escopo-v1.md),
 [`medfusion-os-api/docs/openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/openapi.yaml)
