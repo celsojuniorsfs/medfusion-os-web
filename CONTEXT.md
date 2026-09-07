@@ -33,6 +33,10 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
   orçar novamente o mesmo equipamento — comum quando o cliente tem mais de uma unidade do mesmo
   modelo. Não é para reabrir nada; `nao_aprovado` e `cancelada` nunca se convertem um no outro.
   Vira tela dedicada na v1 (ver `escopo-v1.md` § Histórico do equipamento).
+- **Snapshot do equipamento na OS** — decidido na Fase 2 (Análise): `order_equipments` guarda uma
+  cópia dos dados do equipamento no momento da criação da OS, não só um vínculo. Editar o
+  cadastro do equipamento depois não reescreve OS's antigas — o histórico fica fiel ao que foi
+  atendido na época.
 - **N/S** — número de série do equipamento.
 - **Peças de reposição** — tabela de Quantidade / Descrição / Valor usada no orçamento
   apresentado ao cliente. Distinta do custo interno da peça (ver CUSTOS). Confirmado na validação:
@@ -127,6 +131,18 @@ e na tabela de decisões.
   equipamento específico — usa como perfil do cliente.
 - Decisão: vira uma **tela de histórico dedicada** no cadastro do equipamento (não só dado
   consultável por filtro) — ver `escopo-v1.md` § Histórico do equipamento.
+
+## Fase 2 — Análise (fechada em 07/09/2026)
+
+Das 9 issues de análise abertas pelas validações, 8 foram fechadas nesta fase — as perguntas que
+restavam eram decisões técnicas (não dependiam de nova rodada com o cliente): padrão de snapshot
+do equipamento na OS, aviso (não bloqueio) de número de série duplicado, biblioteca de máscara no
+Angular, e as últimas confirmações de baixo risco do mapa planilha→sistema (Setor/CEP opcionais,
+mesmo padrão já confirmado do PAT).
+
+Uma issue segue aberta por depender de passos manuais do cliente na Meta: `api #65` (notificação
+por WhatsApp) — a Med Fusion precisa verificar a conta comercial **e** submeter um modelo de
+mensagem para aprovação antes de essa funcionalidade poder ir ao ar. Não bloqueia o resto da v1.
 
 Decisões detalhadas e critérios de aceite: [`medfusion-os-web/docs/escopo-v1.md`](./docs/escopo-v1.md),
 [`medfusion-os-api/docs/openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/openapi.yaml)

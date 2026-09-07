@@ -57,7 +57,8 @@ orders           numero (unique, seed 1336), data, client_id, user_id,
                  valor_mao_obra (nullable), total, status,
                  certificado_numero (nullable),
                  pdf_path (nullable), pdf_generated_at (nullable)
-order_equipments order_id, equipment_id
+order_equipments order_id, equipment_id (fk), equipamento, marca, modelo, numero_serie,
+                 patrimonio, acessorios — cópia ("snapshot") no momento da criação da OS
 order_items      order_id, quantidade, descricao, valor_unitario (nullable)
 ```
 
@@ -78,9 +79,16 @@ Notas sobre campos que não estavam explícitos no controle manual:
 - **`equipments` (catálogo por cliente)** — corrige a v1 original, que tratava equipamento como
   texto solto por OS. Confirmado na validação: o cliente espera que o equipamento seja cadastrado
   uma vez e reaproveitado nas próximas OS's do mesmo cliente, como já acontece com os dados do
-  cliente. `order_equipments` vira apenas o vínculo entre a OS e os equipamentos atendidos —
-  **sem limite de quantidade** (ver critérios de aceite). Um equipamento digitado pela primeira
-  vez numa OS é automaticamente salvo no catálogo do cliente.
+  cliente — **sem limite de quantidade** por OS (ver critérios de aceite). Um equipamento
+  digitado pela primeira vez numa OS é automaticamente salvo no catálogo do cliente. Um número de
+  série repetido no mesmo cliente gera apenas um aviso na tela, não bloqueia o cadastro (número
+  de série às vezes é digitado errado ou fica em branco).
+- **`order_equipments` guarda uma cópia, não só o vínculo** — decisão da entrevista de análise:
+  ao criar a OS, os dados do equipamento (equipamento, marca, modelo, nº de série, patrimônio,
+  acessórios) são **copiados** para dentro de `order_equipments`, além do vínculo `equipment_id`.
+  Editar o cadastro do equipamento depois **não** reescreve OS's antigas — o histórico fica fiel
+  ao que foi atendido na época. `equipment_id` continua existindo para navegação e para o filtro
+  da tela de histórico (`GET /orders?equipment_id=X`).
 - **`valor_mao_obra`** — novo campo, corrige a v1 original ("valor sempre obrigatório" em cada
   peça). Casos reais levantados na validação: orçamentos de prefeitura costumam mostrar só o
   valor da mão de obra (peça embutida, para não disparar licitação acima de um teto); clientes
