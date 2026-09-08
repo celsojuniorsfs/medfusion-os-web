@@ -21,15 +21,11 @@
 
 .login-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 8px;
-
-  h1 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-  }
+  text-align: center;
 
   p {
     margin: 0;
@@ -38,18 +34,9 @@
   }
 }
 
-.login-mark {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  font-weight: 700;
-  font-size: 14px;
+.login-logo {
+  height: 72px;
+  width: auto;
 }
 
 .login-error {

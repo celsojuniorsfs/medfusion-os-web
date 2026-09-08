@@ -13,6 +13,7 @@ import { AuthSessionStore } from '../auth/auth-session.store';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, MatIconModule],
   template: `
     <mat-toolbar color="primary">
+      <img src="logo-icon.png" alt="" class="shell-logo" />
       <span class="shell-brand">Med Fusion OS</span>
       <nav class="shell-nav">
         <a mat-button routerLink="/clients" routerLinkActive="shell-nav-active">Clientes</a>
@@ -29,6 +30,11 @@ import { AuthSessionStore } from '../auth/auth-session.store';
     <router-outlet />
   `,
   styles: `
+    .shell-logo {
+      height: 28px;
+      width: auto;
+      margin-right: 8px;
+    }
     .shell-brand {
       font-weight: 600;
       margin-right: 24px;
