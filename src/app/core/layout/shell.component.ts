@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
+import { AuthSessionStore } from '../auth/auth-session.store';
 
 /**
  * Layout das rotas autenticadas — barra superior com navegação e sessão do usuário.
@@ -19,7 +19,7 @@ import { AuthService } from '../../core/services/auth.service';
         <a mat-button routerLink="/orders" routerLinkActive="shell-nav-active">Ordens de Serviço</a>
       </nav>
       <span class="shell-spacer"></span>
-      @if (auth.currentUser(); as user) {
+      @if (auth.user(); as user) {
         <span class="shell-user">{{ user.name }}</span>
       }
       <button mat-icon-button (click)="auth.logout()" aria-label="Sair" title="Sair">
@@ -50,5 +50,5 @@ import { AuthService } from '../../core/services/auth.service';
   `,
 })
 export class ShellComponent {
-  protected readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthSessionStore);
 }

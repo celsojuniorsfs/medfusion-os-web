@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
+import { AuthSessionStore } from '../../../core/auth/auth-session.store';
 
 @Component({
   selector: 'app-login-page',
@@ -24,7 +24,7 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class LoginPage {
   private readonly fb = inject(FormBuilder);
-  private readonly auth = inject(AuthService);
+  private readonly auth = inject(AuthSessionStore);
   private readonly router = inject(Router);
 
   readonly loading = signal(false);

@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
-import { AuthService } from '../services/auth.service';
+import { AuthSessionStore } from '../auth/auth-session.store';
 
 /**
  * Anexa Authorization: Bearer <token> em toda chamada e trata 401 global (limpa sessão,
@@ -10,9 +10,9 @@ import { AuthService } from '../services/auth.service';
  * docs/api-conventions.md § Formato de erro.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const auth = inject(AuthService);
+  const auth = inject(AuthSessionStore);
   const router = inject(Router);
-  const token = auth.token;
+  const token = auth.token();
 
   const authorizedReq = token
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })

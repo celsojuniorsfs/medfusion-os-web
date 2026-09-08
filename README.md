@@ -14,9 +14,47 @@ da API em [`openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/bl
 ## Stack
 
 - **Frontend**: Angular 22 (standalone components) + Angular Material, tema customizado
+- **Estado**: [`@ngrx/signals`](https://ngrx.io/guide/signals) (SignalStore) por feature — ver
+  "Arquitetura" abaixo
 - **Backend**: [medfusion-os-api](https://github.com/celsojuniorsfs/medfusion-os-api) — Laravel + Sanctum (token Bearer)
 - **PDF**: gerado no backend (dompdf) e guardado no Laravel Cloud Object Storage, consumido via API
 - **Deploy**: frontend na Vercel, backend + banco (Laravel MySQL) no Laravel Cloud
+
+## Arquitetura
+
+Standalone (padrão do Angular 22) — sem `NgModule`, sem `SharedModule`. Cada feature é uma
+pasta com rotas lazy e providers próprios:
+
+```
+src/app/
+  core/                      # transversal: sessão de autenticação, interceptor, guard, shell
+    auth/auth-session.store.ts
+    interceptors/auth.interceptor.ts
+    guards/auth.guard.ts
+    layout/shell.component.ts
+  features/
+    identity/                # login — equivalente ao módulo Identity do backend
+      pages/login.page.ts
+      identity.routes.ts
+    clients/
+      pages/                 # telas
+      data-access/           # http + store da feature, no mesmo lugar (sem service à parte)
+      clients.routes.ts
+    orders/                  # mesma forma de clients/
+  shared/ui/                 # componentes "burros" reutilizáveis (sem regra de negócio)
+```
+
+O paralelo com a arquitetura do backend (monólito modular + Event Sourcing, ver
+[`docs/architecture.md`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/architecture.md)):
+
+| Backend | Front |
+|---|---|
+| Aggregate + métodos de comando | `withMethods` do SignalStore |
+| Projector / read model | `withEntities` + `withComputed` |
+| Evento como superfície pública do módulo | o store da feature é a superfície pública |
+
+Uma feature nunca importa `data-access/` de outra — só o store dela. `core/` não conhece
+nenhuma feature.
 
 ## Como rodar localmente
 
@@ -59,6 +97,8 @@ de equipamento.
 Nomes de campo em inglês (padronizado em 08/09/2026); tabela de correspondência com os termos
 em português usados com o cliente em
 [`api-conventions.md`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/api-conventions.md).
+`id` é uuid (identidade dos agregados do Event Sourcing no backend — ver `architecture.md` da
+API); `number` da OS continua um inteiro sequencial (seed 1336), sem relação com identidade.
 
 ```
 users             name, email, password

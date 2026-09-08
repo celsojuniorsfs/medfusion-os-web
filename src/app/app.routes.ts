@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
-import { ShellComponent } from './shared/components/shell.component';
+import { ShellComponent } from './core/layout/shell.component';
 
 export const routes: Routes = [
   {
     path: 'login',
-    loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
+    loadChildren: () => import('./features/identity/identity.routes').then((m) => m.IDENTITY_ROUTES),
   },
   {
     path: '',
@@ -15,11 +15,11 @@ export const routes: Routes = [
       { path: '', redirectTo: 'clients', pathMatch: 'full' },
       {
         path: 'clients',
-        loadComponent: () => import('./features/clients/clients.page').then((m) => m.ClientsPage),
+        loadChildren: () => import('./features/clients/clients.routes').then((m) => m.CLIENTS_ROUTES),
       },
       {
         path: 'orders',
-        loadComponent: () => import('./features/orders/orders.page').then((m) => m.OrdersPage),
+        loadChildren: () => import('./features/orders/orders.routes').then((m) => m.ORDERS_ROUTES),
       },
     ],
   },
