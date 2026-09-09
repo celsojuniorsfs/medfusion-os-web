@@ -1,6 +1,6 @@
 # Med Fusion — Ordem de Serviço (Web)
 
-Frontend Angular do sistema de Ordem de Serviço / Orçamento Técnico da
+Frontend Angular do sistema de Ordem de Serviço da
 **Med Fusion Manutenção e Venda Clínica Hospitalar Ltda.**
 
 Substitui o controle atual, feito manualmente em planilhas Excel (uma por OS, nomeadas
@@ -51,10 +51,10 @@ src/app/
 O paralelo com a arquitetura do backend (monólito modular + Event Sourcing, ver
 [`docs/architecture.md`](https://github.com/celsojuniorsfs/medfusion-os-api/blob/main/docs/architecture.md)):
 
-| Backend | Front |
-|---|---|
-| Aggregate + métodos de comando | `withMethods` do SignalStore |
-| Projector / read model | `withEntities` + `withComputed` |
+| Backend                                  | Front                                     |
+| ---------------------------------------- | ----------------------------------------- |
+| Aggregate + métodos de comando           | `withMethods` do SignalStore              |
+| Projector / read model                   | `withEntities` + `withComputed`           |
 | Evento como superfície pública do módulo | o store da feature é a superfície pública |
 
 Uma feature nunca importa `data-access/` de outra — só o store dela. `core/` não conhece
