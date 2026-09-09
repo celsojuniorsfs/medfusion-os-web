@@ -1,4 +1,6 @@
-<div class="flex min-h-dvh items-center justify-center bg-gradient-to-br from-primary/15 via-primary/5 to-background p-6">
+<div
+  class="flex min-h-dvh items-center justify-center bg-gradient-to-br from-primary/15 via-primary/5 to-background p-6"
+>
   <form
     class="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-card p-8 shadow-sm"
     [formGroup]="form"
@@ -6,7 +8,7 @@
   >
     <div class="mb-2 flex flex-col items-center gap-2 text-center">
       <img src="logo-full.png" alt="Med Fusion" class="h-16 w-auto" />
-      <p class="text-xs text-muted-foreground">Ordem de Serviço / Orçamento Técnico</p>
+      <p class="text-xs text-muted-foreground">Ordem de Serviço</p>
     </div>
 
     <div class="flex flex-col gap-1.5">
@@ -17,7 +19,9 @@
         formControlName="email"
         autocomplete="username"
         class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched ? true : null"
+        [attr.aria-invalid]="
+          form.controls.email.invalid && form.controls.email.touched ? true : null
+        "
       />
       @if (form.controls.email.hasError('required') && form.controls.email.touched) {
         <span class="text-xs text-destructive">Informe o e-mail</span>
@@ -35,7 +39,9 @@
           formControlName="password"
           autocomplete="current-password"
           class="h-9 w-full rounded-md border border-input bg-input-background px-3 pr-9 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          [attr.aria-invalid]="form.controls.password.invalid && form.controls.password.touched ? true : null"
+          [attr.aria-invalid]="
+            form.controls.password.invalid && form.controls.password.touched ? true : null
+          "
         />
         <button
           type="button"
