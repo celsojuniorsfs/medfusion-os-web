@@ -31,12 +31,13 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.13 0.028 261.692);
 
-  // Marca Med Fusion (teal #0f8a83) no lugar do neutro padrão do tema "gray" gerado pelo
-  // spartan-ng init — é a cor de destaque em todo o design de referência (header, sidebar
-  // ativa, avatar), mesmo o resto da paleta sendo neutro.
-  --primary: #0f8a83;
+  // Marca Med Fusion (teal #37999e, extraído do logo do cliente — public/logo-full.png) no
+  // lugar do neutro padrão do tema "gray" gerado pelo spartan-ng init — é a cor de destaque em
+  // todo o design de referência (header, sidebar ativa, avatar), mesmo o resto da paleta sendo
+  // neutro.
+  --primary: #37999e;
   --primary-foreground: #ffffff;
-  --ring: #0f8a83;
+  --ring: #37999e;
 
   --secondary: oklch(0.967 0.003 264.542);
   --secondary-foreground: oklch(0.21 0.034 264.665);
@@ -51,12 +52,12 @@
 
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.13 0.028 261.692);
-  --sidebar-primary: #0f8a83;
+  --sidebar-primary: #37999e;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.967 0.003 264.542);
   --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
   --sidebar-border: oklch(0.928 0.006 264.531);
-  --sidebar-ring: #0f8a83;
+  --sidebar-ring: #37999e;
 }
 
 @layer base {
