@@ -1,8 +1,14 @@
 # Contexto de domínio — Med Fusion OS
 
 Este documento registra o vocabulário e as decisões de negócio levantadas na entrevista com o
-cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exemplo-os-1.jpeg`,
-`public/exemplos-os-2.jpeg`), para que essas fontes deixem de ser a única referência do domínio.
+cliente e na análise do controle manual atual (`docs/reference/OS.xlsx`, `docs/reference/exemplo-os-1.jpeg`,
+`docs/reference/exemplos-os-2.jpeg`), para que essas fontes deixem de ser a única referência do domínio.
+
+> **Nota de 08/09/2026**: os nomes de campo (banco/API) foram padronizados em inglês depois das
+> rodadas de validação registradas abaixo — as citações de campo entre crases neste documento já
+> usam o nome atual (ex.: `not_approved`, não mais `nao_aprovado`). O vocabulário de negócio (o
+> que cada coisa *significa* para o cliente) continua em português; só o nome técnico do campo
+> mudou. Tabela completa de correspondência em `medfusion-os-api/docs/api-conventions.md`.
 
 ## Glossário
 
@@ -29,9 +35,9 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
   só costuma ser preenchido em clientes com controle de patrimônio ativo (prefeituras,
   hospitais); na maioria dos atendimentos fica em branco.
 - **Histórico do equipamento** — confirmado na terceira rodada de validação: o cliente usa o
-  histórico de OS's de um equipamento (inclusive as `nao_aprovado`) como referência de preço ao
+  histórico de OS's de um equipamento (inclusive as `not_approved`) como referência de preço ao
   orçar novamente o mesmo equipamento — comum quando o cliente tem mais de uma unidade do mesmo
-  modelo. Não é para reabrir nada; `nao_aprovado` e `cancelada` nunca se convertem um no outro.
+  modelo. Não é para reabrir nada; `not_approved` e `canceled` nunca se convertem um no outro.
   Vira tela dedicada na v1 (ver `escopo-v1.md` § Histórico do equipamento).
 - **Snapshot do equipamento na OS** — decidido na Fase 2 (Análise): `order_equipments` guarda uma
   cópia dos dados do equipamento no momento da criação da OS, não só um vínculo. Editar o
@@ -40,14 +46,14 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
 - **N/S** — número de série do equipamento.
 - **Peças de reposição** — tabela de Quantidade / Descrição / Valor usada no orçamento
   apresentado ao cliente. Distinta do custo interno da peça (ver CUSTOS). Confirmado na validação:
-  o **valor unitário é opcional**, não obrigatório como registrado antes — ver `valor_mao_obra`.
+  o **valor unitário é opcional**, não obrigatório como registrado antes — ver `labor_cost`.
 - **Valor de mão de obra** — campo novo, separado do valor das peças. Existem três formatos reais
   de orçamento apresentados ao cliente: só valor de peça, só valor de mão de obra (peça embutida —
   caso comum com prefeituras, para o total não ultrapassar o teto que dispara licitação), ou os
   dois valores separados (caso mais comum com clientes particulares).
 - **Certificado** — documento à parte, gerado a partir de um modelo padrão por tipo de
   equipamento (ex.: modelo "bisturi"). Normalmente usa o **mesmo número da OS**. Fora da v1;
-  o modelo de dados já prevê o campo `certificado_numero` em `orders` para o vínculo futuro.
+  o modelo de dados já prevê o campo `certificate_number` em `orders` para o vínculo futuro.
   Confirmado na validação: continuam sendo emitidos manualmente por enquanto, seguindo a
   numeração da OS gerada pelo sistema para não haver duplicidade; a empresa tem mais de
   100–200 modelos diferentes (um por tipo de equipamento/finalidade/parâmetro de análise) e vai
@@ -55,21 +61,21 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
 - **Status da OS** — campo sem equivalente na planilha (o controle de andamento hoje é
   informal), introduzido na v1 porque o backlog já depende dele. Fluxo fechado nas duas rodadas
   de validação de 07/09/2026:
-  `aberta` → `em_analise` → `orcamento_externo` (opcional, quando enviado a terceiro para
-  avaliação) → `aguardando_aprovacao` → `aprovada` → `concluida`; `cancelada` alcançável a
-  partir de qualquer estado anterior a `aprovada`. `nao_aprovado` é distinto de `cancelada`: só
-  alcançável a partir de `aguardando_aprovacao`, para quando o orçamento fica sem retorno do
+  `open` → `in_analysis` → `external_quote` (opcional, quando enviado a terceiro para
+  avaliação) → `awaiting_approval` → `approved` → `completed`; `canceled` alcançável a
+  partir de qualquer estado anterior a `approved`. `not_approved` é distinto de `canceled`: só
+  alcançável a partir de `awaiting_approval`, para quando o orçamento fica sem retorno do
   cliente por tempo suficiente (mudança manual do técnico, sem prazo automático) — o cliente quis
-  medir isso separado de um cancelamento por decisão. `garantia` é uma reabertura especial: só a
-  partir de `concluida`, dentro do prazo de garantia, quando o mesmo equipamento volta com
-  retrabalho — reabre a **mesma OS** (não cria uma nova) e depois volta a fluir para `concluida`.
+  medir isso separado de um cancelamento por decisão. `warranty_repair` é uma reabertura especial:
+  só a partir de `completed`, dentro do prazo de garantia, quando o mesmo equipamento volta com
+  retrabalho — reabre a **mesma OS** (não cria uma nova) e depois volta a fluir para `completed`.
   Serve para a empresa medir quantos retrabalhos aconteceram num período. Nenhum estado final
   impede consultar os dados da OS depois (ex.: cliente liga meses depois perguntando por um
   orçamento cancelado ou não aprovado) — só o status em si não retrocede.
 - **Notificação automática** — a partir da validação: ao registrar a OS, o sistema envia
   automaticamente uma cópia do PDF ao cliente por e-mail e por WhatsApp.
 - **Observação** — campo de texto livre da OS, visto no exemplo real (`"Orçamento apenas de
-  peças, mão de obra inclusa no contrato."`). Mapeado para `orders.observacao`.
+  peças, mão de obra inclusa no contrato."`). Mapeado para `orders.notes`.
 - **Aba CUSTOS** (fora da v1) — controle interno de margem por OS, não visto pelo cliente:
   - custo de cada peça, fornecedor, contato, link de compra, e-mail e **status de compra**
     (`em estoque` / `á comprar` / `comprado`), com data de compra e previsão de entrega;
@@ -86,14 +92,14 @@ cliente e na análise do controle manual atual (`public/OS.xlsx`, `public/exempl
 | Certificados | Não implementados na v1; apenas campo de vínculo modelado |
 | Aba CUSTOS | Backlog pós-v1 |
 | PDF | Gerado no backend (Laravel + dompdf), guardado no Object Storage do Laravel Cloud, consumido pelo frontend |
-| UI | Angular Material |
+| UI | Tailwind CSS v4 + Spartan UI (`@spartan-ng/brain`) + lucide-angular — trocou Angular Material em 08/09/2026 (pedido de identidade visual própria a partir de referência do cliente) |
 | Autenticação | Sanctum em modo token (Bearer); poucos técnicos, sem papéis/permissões |
 | Hospedagem | Frontend na Vercel; API + banco (Laravel MySQL) no Laravel Cloud |
 | Ambientes | Local e produção apenas — sem staging na v1 |
 | Contrato da API | `openapi.yaml` escrito à mão (spec-first), em `medfusion-os-api/docs/` |
 | Equipamentos por OS | Corrigido 07/09/2026: sem limite (era "até 2"); catálogo reaproveitável por cliente |
-| Valor de peça | Corrigido 07/09/2026: opcional (era "sempre obrigatório"); novo campo `valor_mao_obra` |
-| Status da OS | Ampliado e fechado 07/09/2026 (9 estados, com reabertura por garantia e `nao_aprovado` distinto de `cancelada`) |
+| Valor de peça | Corrigido 07/09/2026: opcional (era "sempre obrigatório"); novo campo `labor_cost` |
+| Status da OS | Ampliado e fechado 07/09/2026 (9 estados, com reabertura por garantia e `not_approved` distinto de `canceled`) |
 | Notificação | Novo 07/09/2026: envio automático do PDF por e-mail e WhatsApp na criação da OS |
 | Bloco físico de OS | Confirmado 07/09/2026: descontinuado assim que o sistema entrar em operação |
 
@@ -107,7 +113,7 @@ e na tabela de decisões.
 
 **Rodada 1** — resumo do que mudou em relação ao que estava fechado antes:
 - **Corrigido**: limite de equipamentos por OS (era 2, agora sem limite) e obrigatoriedade do
-  valor da peça (agora opcional, com `valor_mao_obra` como campo novo).
+  valor da peça (agora opcional, com `labor_cost` como campo novo).
 - **Confirmado sem mudança**: PAT opcional, certificados e custos internos seguem fora da v1,
   acesso por técnico como desenhado.
 - **Novo pedido de escopo**: catálogo de equipamentos reaproveitável por cliente; notificação
@@ -117,15 +123,15 @@ e na tabela de decisões.
   descreveu, mas a confirmação exata do desenho ainda não tinha fechado.
 
 **Rodada 2** — fechou o único ponto em aberto (status):
-- Cliente confirmou que **nunca precisou reabrir** uma OS `cancelada` — a necessidade real é só
+- Cliente confirmou que **nunca precisou reabrir** uma OS `canceled` — a necessidade real é só
   poder **consultar** o histórico depois (já coberto, a consulta não depende do status).
-- Identificou que `cancelada` misturava dois motivos diferentes: cliente que não quer mais o
+- Identificou que `canceled` misturava dois motivos diferentes: cliente que não quer mais o
   serviço, e orçamento que fica meses sem resposta. Pediu para medir esse segundo caso à parte —
-  daí o novo status `nao_aprovado` (só a partir de `aguardando_aprovacao`, manual).
+  daí o novo status `not_approved` (só a partir de `awaiting_approval`, manual).
 - Com essa adição, o fluxo de status está **fechado** — ver `escopo-v1.md` § Status da OS.
 
-**Rodada 3** — explicou o motivo de guardar `nao_aprovado`:
-- `nao_aprovado` e `cancelada` **nunca** se convertem um no outro — não é sobre reabrir, é sobre
+**Rodada 3** — explicou o motivo de guardar `not_approved`:
+- `not_approved` e `canceled` **nunca** se convertem um no outro — não é sobre reabrir, é sobre
   guardar referência de preço. Exemplo dele: clientes costumam ter mais de uma unidade do mesmo
   equipamento; ao orçar de novo, ele quer ver se aquele valor já foi recusado antes naquele
   equipamento específico — usa como perfil do cliente.
