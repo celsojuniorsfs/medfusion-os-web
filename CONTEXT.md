@@ -92,7 +92,7 @@ cliente e na análise do controle manual atual (`docs/reference/OS.xlsx`, `docs/
 | Certificados | Não implementados na v1; apenas campo de vínculo modelado |
 | Aba CUSTOS | Backlog pós-v1 |
 | PDF | Gerado no backend (Laravel + dompdf), guardado no Object Storage do Laravel Cloud, consumido pelo frontend |
-| UI | Angular Material |
+| UI | Tailwind CSS v4 + Spartan UI (`@spartan-ng/brain`) + lucide-angular — trocou Angular Material em 08/09/2026 (pedido de identidade visual própria a partir de referência do cliente) |
 | Autenticação | Sanctum em modo token (Bearer); poucos técnicos, sem papéis/permissões |
 | Hospedagem | Frontend na Vercel; API + banco (Laravel MySQL) no Laravel Cloud |
 | Ambientes | Local e produção apenas — sem staging na v1 |

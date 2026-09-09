@@ -1,60 +1,38 @@
-import { Component, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { CdkMenuModule } from '@angular/cdk/menu';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthSessionStore } from '../auth/auth-session.store';
 
+interface NavItem {
+  path: string;
+  label: string;
+  icon: string;
+}
+
 /**
- * Layout das rotas autenticadas — barra superior com navegação e sessão do usuário.
+ * Layout das rotas autenticadas — header fixo + sidebar de navegação, no lugar da barra única
+ * anterior. Estrutura inspirada no design system de referência do cliente (header + sidebar
+ * fixa + conteúdo em cards).
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, MatIconModule],
-  template: `
-    <mat-toolbar color="primary">
-      <img src="logo-icon.png" alt="" class="shell-logo" />
-      <span class="shell-brand">Med Fusion OS</span>
-      <nav class="shell-nav">
-        <a mat-button routerLink="/clients" routerLinkActive="shell-nav-active">Clientes</a>
-        <a mat-button routerLink="/orders" routerLinkActive="shell-nav-active">Ordens de Serviço</a>
-      </nav>
-      <span class="shell-spacer"></span>
-      @if (auth.user(); as user) {
-        <span class="shell-user">{{ user.name }}</span>
-      }
-      <button mat-icon-button (click)="auth.logout()" aria-label="Sair" title="Sair">
-        <mat-icon>logout</mat-icon>
-      </button>
-    </mat-toolbar>
-    <router-outlet />
-  `,
-  styles: `
-    .shell-logo {
-      height: 28px;
-      width: auto;
-      margin-right: 8px;
-    }
-    .shell-brand {
-      font-weight: 600;
-      margin-right: 24px;
-    }
-    .shell-nav {
-      display: flex;
-      gap: 4px;
-    }
-    .shell-nav-active {
-      font-weight: 600;
-    }
-    .shell-spacer {
-      flex: 1 1 auto;
-    }
-    .shell-user {
-      margin-right: 8px;
-      font-size: 13px;
-    }
-  `,
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    CdkMenuModule,
+    LucideAngularModule,
+  ],
+  templateUrl: './shell.component.html',
 })
 export class ShellComponent {
   protected readonly auth = inject(AuthSessionStore);
+
+  protected readonly navItems: NavItem[] = [
+    { path: '/clients', label: 'Clientes', icon: 'users' },
+    { path: '/orders', label: 'Ordens de Serviço', icon: 'clipboard-list' },
+  ];
+
+  protected readonly userInitial = computed(() => this.auth.user()?.name?.charAt(0).toUpperCase() ?? '?');
 }

@@ -1,42 +1,77 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
-@use '@angular/material' as mat;
-// Paleta gerada a partir do teal da Med Fusion (#0f8a83) — ver README para regenerar.
-@use './theme-colors' as theme;
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
 
-html {
-  height: 100%;
-  @include mat.theme(
-    (
-      color: (
-        theme-type: light,
-        primary: theme.$primary-palette,
-        tertiary: theme.$tertiary-palette,
-      ),
-      typography: Roboto,
-      density: 0,
-    )
-  );
+@import '@spartan-ng/brain/hlm-tailwind-preset.css';
+
+// O preset não registra --color-input-background (só --color-input, usado como cor de borda) —
+// o padrão de input do shadcn/ui usa os dois separadamente.
+@theme inline {
+  --color-input-background: var(--input-background);
 }
 
-body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
+:root {
   color-scheme: light;
 
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-  // Reset the user agent margin.
-  margin: 0;
-  height: 100%;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.13 0.028 261.692);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.028 261.692);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.028 261.692);
+
+  // Marca Med Fusion (teal #0f8a83) no lugar do neutro padrão do tema "gray" gerado pelo
+  // spartan-ng init — é a cor de destaque em todo o design de referência (header, sidebar
+  // ativa, avatar), mesmo o resto da paleta sendo neutro.
+  --primary: #0f8a83;
+  --primary-foreground: #ffffff;
+  --ring: #0f8a83;
+
+  --secondary: oklch(0.967 0.003 264.542);
+  --secondary-foreground: oklch(0.21 0.034 264.665);
+  --muted: oklch(0.967 0.003 264.542);
+  --muted-foreground: oklch(0.551 0.027 264.364);
+  --accent: oklch(0.967 0.003 264.542);
+  --accent-foreground: oklch(0.21 0.034 264.665);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.928 0.006 264.531);
+  --input: oklch(0.928 0.006 264.531);
+  --input-background: #f3f3f5;
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.13 0.028 261.692);
+  --sidebar-primary: #0f8a83;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: oklch(0.967 0.003 264.542);
+  --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
+  --sidebar-border: oklch(0.928 0.006 264.531);
+  --sidebar-ring: #0f8a83;
 }
-/* You can add global styles to this file, and also import other style files */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    margin: 0;
+    height: 100%;
+  }
+
+  html {
+    height: 100%;
+  }
+}
