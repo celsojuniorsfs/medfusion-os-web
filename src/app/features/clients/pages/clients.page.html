@@ -1,0 +1,115 @@
+<div class="flex flex-col gap-4">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-semibold">Clientes</h1>
+      <p class="text-sm text-muted-foreground">Cadastro, busca e histórico de clientes.</p>
+    </div>
+    <a
+      routerLink="novo"
+      class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+    >
+      <i-lucide name="plus" [size]="16" />
+      Novo Cliente
+    </a>
+  </div>
+
+  <div class="relative max-w-sm">
+    <i-lucide
+      name="search"
+      [size]="16"
+      class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+    />
+    <input
+      type="search"
+      placeholder="Buscar por razão social ou CNPJ"
+      [value]="searchInput()"
+      (input)="onSearchInput($any($event.target).value)"
+      class="h-9 w-full rounded-md border border-input bg-input-background py-2 pl-9 pr-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    />
+  </div>
+
+  <ui-card>
+    @if (store.loading()) {
+      <p class="p-6 text-sm text-muted-foreground">Carregando...</p>
+    } @else if (store.error()) {
+      <p class="p-6 text-sm text-destructive">{{ store.error() }}</p>
+    } @else if (store.entities().length === 0) {
+      <p class="p-6 text-sm text-muted-foreground">
+        @if (store.search()) {
+          Nenhum cliente encontrado para "{{ store.search() }}".
+        } @else {
+          Nenhum cliente cadastrado ainda.
+        }
+      </p>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border text-left text-muted-foreground">
+              <th class="px-4 py-3 font-medium">Razão social</th>
+              <th class="px-4 py-3 font-medium">CNPJ</th>
+              <th class="px-4 py-3 font-medium">Telefone</th>
+              <th class="px-4 py-3 font-medium">Cidade</th>
+              <th class="px-4 py-3 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (client of store.entities(); track client.id) {
+              <tr class="border-b border-border last:border-0 hover:bg-accent/50">
+                <td class="px-4 py-3">{{ client.company_name }}</td>
+                <td class="px-4 py-3">{{ client.tax_id }}</td>
+                <td class="px-4 py-3">{{ client.phone || '—' }}</td>
+                <td class="px-4 py-3">{{ client.city || '—' }}</td>
+                <td class="px-4 py-3">
+                  <div class="flex justify-end gap-1">
+                    <a
+                      [routerLink]="[client.id, 'editar']"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      aria-label="Editar"
+                      title="Editar"
+                    >
+                      <i-lucide name="pencil" [size]="16" />
+                    </a>
+                    <button
+                      type="button"
+                      (click)="remove(client.id, client.company_name ?? '')"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                      aria-label="Remover"
+                      title="Remover"
+                    >
+                      <i-lucide name="trash-2" [size]="16" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
+        <span>Página {{ store.page() }} de {{ store.lastPage() }} — {{ store.total() }} no total</span>
+        <div class="flex gap-1">
+          <button
+            type="button"
+            [disabled]="store.page() <= 1"
+            (click)="goToPage(store.page() - 1)"
+            class="inline-flex h-8 items-center gap-1 rounded-md border border-input px-2 disabled:pointer-events-none disabled:opacity-50"
+          >
+            <i-lucide name="chevron-left" [size]="14" />
+            Anterior
+          </button>
+          <button
+            type="button"
+            [disabled]="store.page() >= store.lastPage()"
+            (click)="goToPage(store.page() + 1)"
+            class="inline-flex h-8 items-center gap-1 rounded-md border border-input px-2 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Próxima
+            <i-lucide name="chevron-right" [size]="14" />
+          </button>
+        </div>
+      </div>
+    }
+  </ui-card>
+</div>

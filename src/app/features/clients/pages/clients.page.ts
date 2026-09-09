@@ -1,22 +1,50 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { ClientsStore } from '../data-access/clients.store';
 
 /**
- * Placeholder — CRUD de clientes entra nas próximas issues da F4 (web #33-#36).
+ * Listagem de clientes: busca (com debounce), paginação, ações de editar/remover.
  */
 @Component({
   selector: 'app-clients-page',
-  imports: [CardComponent],
-  template: `
-    <div class="flex flex-col gap-4">
-      <div>
-        <h1 class="text-xl font-semibold">Clientes</h1>
-        <p class="text-sm text-muted-foreground">Cadastro, busca e histórico de clientes.</p>
-      </div>
-      <ui-card class="p-6">
-        <p class="text-sm">Em construção — listagem e cadastro de clientes chegam na próxima etapa da F4.</p>
-      </ui-card>
-    </div>
-  `,
+  imports: [RouterLink, LucideAngularModule, CardComponent],
+  templateUrl: './clients.page.html',
 })
-export class ClientsPage {}
+export class ClientsPage implements OnInit, OnDestroy {
+  protected readonly store = inject(ClientsStore);
+  protected readonly searchInput = signal('');
+
+  private searchTimeout?: ReturnType<typeof setTimeout>;
+
+  ngOnInit(): void {
+    this.store.load();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.searchTimeout);
+  }
+
+  onSearchInput(value: string): void {
+    this.searchInput.set(value);
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => this.store.load(1, value), 300);
+  }
+
+  goToPage(page: number): void {
+    this.store.load(page, this.store.search());
+  }
+
+  async remove(id: string, companyName: string): Promise<void> {
+    if (!confirm(`Remover o cliente "${companyName}"? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      await this.store.remove(id);
+    } catch {
+      alert('Não foi possível remover o cliente — verifique se não há Ordens de Serviço vinculadas a ele.');
+    }
+  }
+}
