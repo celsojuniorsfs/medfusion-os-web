@@ -17,7 +17,8 @@ da API em [`openapi.yaml`](https://github.com/celsojuniorsfs/medfusion-os-api/bl
   [Spartan UI](https://spartan.ng/) (`@spartan-ng/brain`, headless — equivalente Angular do
   shadcn/ui) + [`lucide-angular`](https://lucide.dev/) para ícones. Design system definido a
   partir de uma referência do cliente (dashboard admin com header + sidebar fixa + cards);
-  `--primary` é o teal da marca (`#0f8a83`), o resto da paleta é neutra — ver `src/styles.scss`
+  `--primary` é o teal da marca (`#37999e`, extraído do logo do cliente), o resto da paleta é
+  neutra — ver `src/styles.scss`
 - **Estado**: [`@ngrx/signals`](https://ngrx.io/guide/signals) (SignalStore) por feature — ver
   "Arquitetura" abaixo
 - **Backend**: [medfusion-os-api](https://github.com/celsojuniorsfs/medfusion-os-api) — Laravel + Sanctum (token Bearer)
