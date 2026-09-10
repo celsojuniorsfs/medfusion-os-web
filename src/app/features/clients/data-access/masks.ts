@@ -24,12 +24,22 @@ export function formatCnpj(value: string): string {
 }
 
 /**
- * Cliente pode cadastrar com CPF (nome próprio) ou CNPJ (razão social) — a maioria usa CNPJ, mas
- * uma parte não (feedback do Augusto em 10/09/2026). Como não dá pra saber de antemão qual é,
- * aplica a máscara de CPF enquanto tiver até 11 dígitos e passa pra de CNPJ a partir do 12º.
+ * Cliente pode cadastrar com CPF (pessoa física) ou CNPJ (pessoa jurídica) — a maioria usa CNPJ,
+ * mas uma parte não (feedback do Augusto em 10/09/2026). Desde que o cadastro ganhou um campo
+ * explícito de tipo de pessoa (10/09/2026), passar `personType` decide a máscara certa direto;
+ * sem ele, adivinha pelo tamanho (compatibilidade com quem ainda não sabe o tipo, ex.: máscara
+ * rodando antes do campo de tipo ser preenchido).
  */
-export function formatTaxId(value: string): string {
+export function formatTaxId(value: string, personType?: 'individual' | 'company'): string {
   const digits = value.replace(/\D/g, '').slice(0, 14);
+
+  if (personType === 'individual') {
+    return formatCpf(digits);
+  }
+
+  if (personType === 'company') {
+    return formatCnpj(digits);
+  }
 
   return digits.length <= 11 ? formatCpf(digits) : formatCnpj(digits);
 }

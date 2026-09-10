@@ -36,8 +36,8 @@ export class ClientsPage implements OnInit, OnDestroy {
     this.store.load(page, this.store.search());
   }
 
-  async remove(id: string, companyName: string): Promise<void> {
-    if (!confirm(`Remover o cliente "${companyName}"? Essa ação não pode ser desfeita.`)) {
+  async remove(id: string, name: string): Promise<void> {
+    if (!confirm(`Remover o cliente "${name}"? Essa ação não pode ser desfeita.`)) {
       return;
     }
 

@@ -107,7 +107,8 @@ API); `number` da OS continua um inteiro sequencial (seed 1336), sem relação c
 
 ```
 users             name, email, password
-clients           company_name, tax_id, requester, department, phone, address, city, postal_code
+clients           person_type, name, trade_name, tax_id, state_registration, requester,
+                  department, phone, email, address, city, state, postal_code
 equipments        client_id, name, brand, model, serial_number, asset_tag, accessories
 orders            number (unique, seed 1336), date, client_id, user_id,
                   picked_up, warranty, technical_training, on_site_quote, rental (bool),

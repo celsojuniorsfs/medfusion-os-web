@@ -12,12 +12,18 @@
 > vocabulário de negócio com o cliente continua em português, só o nome técnico do campo mudou
 > (ex.: "razão social" continua sendo como todo mundo chama o campo, `company_name` é só como
 > ele se chama no banco). Tabela de correspondência completa em `api-conventions.md`.
+>
+> **Atualizado em 10/09/2026**: cadastro de cliente passa a cobrir pessoa física explicitamente,
+> não só jurídica (feedback do Augusto — parte dos clientes cadastra em nome próprio, com CPF).
+> `company_name` vira `name`; novos campos `person_type`, `trade_name`, `state_registration`,
+> `email` e `state` (UF).
 
 ## Dentro da v1
 
 - **Autenticação** de técnicos via Laravel Sanctum (token), sem papéis/permissões — todo usuário
   autenticado tem o mesmo poder. Toda OS registra quem a criou.
-- **Clientes**: CRUD completo, listagem paginada com busca por razão social/CNPJ.
+- **Clientes**: CRUD completo, listagem paginada com busca por nome/razão social ou CPF/CNPJ.
+  Cobre pessoa física e jurídica (campo `person_type`).
 - **Catálogo de equipamentos por cliente**: cada equipamento é cadastrado uma vez no cliente e
   reaproveitado nas próximas OS's — não se redigita a cada atendimento (ver nota abaixo).
 - **Histórico de OS por equipamento**: tela dedicada no cadastro do equipamento, listando as
@@ -55,7 +61,8 @@ português usados com o cliente em `api-conventions.md`.
 
 ```
 users            name, email, password
-clients          company_name, tax_id, requester, department, phone, address, city, postal_code
+clients          person_type, name, trade_name, tax_id, state_registration, requester,
+                 department, phone, email, address, city, state, postal_code
 equipments       client_id, name, brand, model, serial_number, asset_tag, accessories
 orders           number (unique, seed 1336), date, client_id, user_id,
                  picked_up, warranty, technical_training, on_site_quote, rental (bool),
@@ -113,7 +120,7 @@ Baseado em `docs/reference/OS.xlsx`, `docs/reference/exemplo-os-1.jpeg` (OS 1336
 |---|---|---|
 | Orçamento (nº) | `orders.number` | |
 | Data | `orders.date` | |
-| Cliente / CNPJ / Solicitante / Setor / Telefone / Endereço / Cidade / CEP | `clients.*` (`company_name`, `tax_id`, `requester`, `department`, `phone`, `address`, `city`, `postal_code`) | Setor e CEP costumam vir vazios no exemplo — campos opcionais |
+| Cliente / CNPJ / Solicitante / Setor / Telefone / Endereço / Cidade / CEP | `clients.*` (`name`, `tax_id`, `requester`, `department`, `phone`, `address`, `city`, `postal_code`) | Setor e CEP costumam vir vazios no exemplo — campos opcionais; a planilha só previa pessoa jurídica, o sistema também aceita pessoa física (`person_type`) |
 | RETIRADO / GARANTIA / TREINAMENTO TÉCNICO / ORÇ. LOCAL / LOCAÇÃO | `orders.picked_up`, `.warranty`, `.technical_training`, `.on_site_quote`, `.rental` | booleanos independentes, não excludentes |
 | EQUIP 1 / EQUIP 2 (Equipamento, Marca, Modelo, N/S, PAT, Acessórios) | `equipments` (catálogo do cliente) + `order_equipments` (vínculo) — `name`, `brand`, `model`, `serial_number`, `asset_tag`, `accessories` | **Sem limite de quantidade** — corrigido na validação; PAT (`asset_tag`) confirmado opcional (só preenchido em clientes com patrimônio ativo) |
 | Defeito apresentado | `orders.reported_defect` | |
