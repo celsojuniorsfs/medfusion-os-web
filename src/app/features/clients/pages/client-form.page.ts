@@ -4,7 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { ClientsStore } from '../data-access/clients.store';
-import { formatCep, formatCnpj, formatPhone } from '../data-access/masks';
+import { formatCep, formatPhone, formatTaxId } from '../data-access/masks';
 
 /**
  * Uma tela só pra criar e editar — os dois formulários são idênticos, só muda se existe um id
@@ -64,7 +64,7 @@ export class ClientFormPage implements OnInit {
   }
 
   onTaxIdInput(value: string): void {
-    this.form.controls.tax_id.setValue(formatCnpj(value));
+    this.form.controls.tax_id.setValue(formatTaxId(value));
   }
 
   onPhoneInput(value: string): void {

@@ -19,7 +19,7 @@
     </span>
     <input
       type="search"
-      placeholder="Buscar por razão social ou CNPJ"
+      placeholder="Buscar por razão social/nome ou CPF/CNPJ"
       [value]="searchInput()"
       (input)="onSearchInput($any($event.target).value)"
       class="h-9 w-full rounded-md border border-input bg-input-background py-2 pl-9 pr-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -44,8 +44,8 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-border text-left text-muted-foreground">
-              <th class="px-4 py-3 font-medium">Razão social</th>
-              <th class="px-4 py-3 font-medium">CNPJ</th>
+              <th class="px-4 py-3 font-medium">Razão social / Nome</th>
+              <th class="px-4 py-3 font-medium">CPF/CNPJ</th>
               <th class="px-4 py-3 font-medium">Telefone</th>
               <th class="px-4 py-3 font-medium">Cidade</th>
               <th class="px-4 py-3 font-medium"></th>

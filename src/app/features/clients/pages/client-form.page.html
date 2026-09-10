@@ -8,19 +8,19 @@
     <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="company_name" class="text-sm font-medium">Razão social</label>
+          <label for="company_name" class="text-sm font-medium">Razão social / Nome</label>
           <input
             id="company_name"
             formControlName="company_name"
             class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
           @if (form.controls.company_name.hasError('required') && form.controls.company_name.touched) {
-            <span class="text-xs text-destructive">Informe a razão social</span>
+            <span class="text-xs text-destructive">Informe a razão social ou nome</span>
           }
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label for="tax_id" class="text-sm font-medium">CNPJ</label>
+          <label for="tax_id" class="text-sm font-medium">CPF/CNPJ</label>
           <input
             id="tax_id"
             formControlName="tax_id"
@@ -29,7 +29,7 @@
             class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
           @if (form.controls.tax_id.hasError('required') && form.controls.tax_id.touched) {
-            <span class="text-xs text-destructive">Informe o CNPJ</span>
+            <span class="text-xs text-destructive">Informe o CPF ou CNPJ</span>
           }
         </div>
 
