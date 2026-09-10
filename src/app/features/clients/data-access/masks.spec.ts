@@ -19,13 +19,21 @@ describe('formatCnpj', () => {
 });
 
 describe('formatTaxId', () => {
-  it('applies the CPF mask while there are 11 digits or fewer', () => {
+  it('without personType, applies the CPF mask while there are 11 digits or fewer', () => {
     expect(formatTaxId('11144477735')).toBe('111.444.777-35');
   });
 
-  it('switches to the CNPJ mask from the 12th digit onward', () => {
+  it('without personType, switches to the CNPJ mask from the 12th digit onward', () => {
     expect(formatTaxId('312332180001')).toBe('31.233.218/0001');
     expect(formatTaxId('31233218000110')).toBe('31.233.218/0001-10');
+  });
+
+  it('with personType "individual", always applies the CPF mask', () => {
+    expect(formatTaxId('11144477735', 'individual')).toBe('111.444.777-35');
+  });
+
+  it('with personType "company", always applies the CNPJ mask, even with few digits', () => {
+    expect(formatTaxId('312332180001', 'company')).toBe('31.233.218/0001');
   });
 });
 
