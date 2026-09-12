@@ -77,6 +77,12 @@ npm start                    # ng serve — http://localhost:4200
 fonte da verdade (decisão da F1). Rode `npm run generate:api-types` de novo sempre que o
 contrato da API mudar.
 
+`package.json` tem um `overrides` pro `openapi-typescript` (força aceitar o TypeScript 6.x do
+projeto, que Angular 22 exige — `openapi-typescript@7.13.0`, a versão mais recente, ainda declara
+peer em `^5.x`). Não é uma gambiarra temporária esperando eu trocar de pacote: o pacote em si
+funciona bem com TS 6 (testado rodando o script de verdade), só o `peerDependencies` declarado
+está atrás. Revisitar quando o mantenedor atualizar o range.
+
 ## Escopo da v1
 
 - Autenticação de técnicos (login simples, sem papéis/permissões)
