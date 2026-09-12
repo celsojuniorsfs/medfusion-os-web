@@ -27,7 +27,9 @@
   </div>
 
   @if (store.loading()) {
-    <ui-card><p class="p-6 text-sm text-muted-foreground">Carregando...</p></ui-card>
+    <ui-card>
+      <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground"><ui-spinner /> Carregando...</div>
+    </ui-card>
   } @else if (store.error()) {
     <ui-card><p class="p-6 text-sm text-destructive">{{ store.error() }}</p></ui-card>
   } @else if (store.entities().length === 0) {
@@ -60,7 +62,7 @@
               </a>
               <button
                 type="button"
-                (click)="remove(client.id, client.name ?? '')"
+                (click)="requestRemove(client.id, client.name ?? '')"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
                 aria-label="Remover"
                 title="Remover"
@@ -150,7 +152,7 @@
                     </a>
                     <button
                       type="button"
-                      (click)="remove(client.id, client.name ?? '')"
+                      (click)="requestRemove(client.id, client.name ?? '')"
                       class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
                       aria-label="Remover"
                       title="Remover"
@@ -192,4 +194,12 @@
       </div>
     </div>
   }
+
+  <ui-confirm-dialog
+    title="Remover cliente"
+    [description]="pendingRemoval() ? 'Remover o cliente \'' + pendingRemoval()!.name + '\'? Essa ação não pode ser desfeita.' : ''"
+    confirmLabel="Remover"
+    [pending]="removing()"
+    (confirmed)="confirmRemove()"
+  />
 </div>

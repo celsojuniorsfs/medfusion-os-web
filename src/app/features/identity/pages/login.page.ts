@@ -2,12 +2,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideEye, LucideEyeOff, LucideLoaderCircle } from '@lucide/angular';
+import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { AuthSessionStore } from '../../../core/auth/auth-session.store';
+import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, LucideEye, LucideEyeOff, LucideLoaderCircle],
+  imports: [ReactiveFormsModule, LucideEye, LucideEyeOff, SpinnerComponent],
   templateUrl: './login.page.html',
 })
 export class LoginPage {
