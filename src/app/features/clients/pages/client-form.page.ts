@@ -2,8 +2,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { BRAZILIAN_STATES } from '../data-access/brazilian-states';
 import { ClientsStore } from '../data-access/clients.store';
 import { formatCep, formatPhone, formatTaxId, toTitleCase } from '../data-access/masks';
@@ -18,7 +20,7 @@ type TitleCaseField = 'name' | 'trade_name' | 'requester' | 'department' | 'addr
  */
 @Component({
   selector: 'app-client-form-page',
-  imports: [ReactiveFormsModule, RouterLink, CardComponent],
+  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent],
   templateUrl: './client-form.page.html',
 })
 export class ClientFormPage implements OnInit {
@@ -29,6 +31,10 @@ export class ClientFormPage implements OnInit {
 
   protected readonly clientId = signal<string | null>(null);
   protected readonly isEditing = computed(() => this.clientId() !== null);
+  // `initialLoading` (busca do cliente pra edição) é separado de `loading` (submit) de propósito:
+  // se fossem o mesmo sinal, o formulário inteiro sumiria atrás de um spinner no meio de um clique
+  // em Salvar — aqui só a busca inicial esconde o form; o submit só desabilita o botão.
+  protected readonly initialLoading = signal(false);
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly brazilianStates = BRAZILIAN_STATES;
@@ -61,7 +67,7 @@ export class ClientFormPage implements OnInit {
     if (!id) return;
 
     this.clientId.set(id);
-    this.loading.set(true);
+    this.initialLoading.set(true);
 
     try {
       const client = await this.store.findOne(id);
@@ -86,7 +92,7 @@ export class ClientFormPage implements OnInit {
     } catch {
       this.errorMessage.set('Não foi possível carregar este cliente.');
     } finally {
-      this.loading.set(false);
+      this.initialLoading.set(false);
     }
   }
 
@@ -145,6 +151,7 @@ export class ClientFormPage implements OnInit {
         await this.store.create(input);
       }
 
+      toast.success(id ? 'Cliente atualizado.' : 'Cliente cadastrado.');
       await this.router.navigateByUrl('/clients');
     } catch (error) {
       this.errorMessage.set(

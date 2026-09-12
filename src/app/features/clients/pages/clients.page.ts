@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   LucideChevronDown,
@@ -9,7 +9,10 @@ import {
   LucideSearch,
   LucideTrash,
 } from '@lucide/angular';
+import { toast } from '@spartan-ng/brain/sonner';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
+import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../data-access/clients.store';
 import { formatTaxId, toTitleCase } from '../data-access/masks';
 
@@ -23,6 +26,8 @@ import { formatTaxId, toTitleCase } from '../data-access/masks';
   imports: [
     RouterLink,
     CardComponent,
+    ConfirmDialogComponent,
+    SpinnerComponent,
     LucidePlus,
     LucideSearch,
     LucidePencil,
@@ -39,7 +44,10 @@ export class ClientsPage implements OnInit, OnDestroy {
   protected readonly formatTaxId = formatTaxId;
   protected readonly toTitleCase = toTitleCase;
   protected readonly expandedIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly pendingRemoval = signal<{ id: string; name: string } | null>(null);
+  protected readonly removing = signal(false);
 
+  private readonly removeDialog = viewChild.required(ConfirmDialogComponent);
   private searchTimeout?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
@@ -72,15 +80,24 @@ export class ClientsPage implements OnInit, OnDestroy {
     });
   }
 
-  async remove(id: string, name: string): Promise<void> {
-    if (!confirm(`Remover o cliente "${name}"? Essa ação não pode ser desfeita.`)) {
-      return;
-    }
+  requestRemove(id: string, name: string): void {
+    this.pendingRemoval.set({ id, name });
+    this.removeDialog().open();
+  }
 
+  async confirmRemove(): Promise<void> {
+    const pending = this.pendingRemoval();
+    if (!pending) return;
+
+    this.removing.set(true);
     try {
-      await this.store.remove(id);
+      await this.store.remove(pending.id);
+      this.removeDialog().close();
+      toast.success('Cliente removido.');
     } catch {
-      alert('Não foi possível remover o cliente — verifique se não há Ordens de Serviço vinculadas a ele.');
+      toast.error('Não foi possível remover o cliente — verifique se não há Ordens de Serviço vinculadas a ele.');
+    } finally {
+      this.removing.set(false);
     }
   }
 }

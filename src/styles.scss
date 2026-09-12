@@ -6,9 +6,12 @@
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
 
 // O preset não registra --color-input-background (só --color-input, usado como cor de borda) —
-// o padrão de input do shadcn/ui usa os dois separadamente.
+// o padrão de input do shadcn/ui usa os dois separadamente. Mesmo motivo pro
+// --color-destructive-foreground: o preset só define --destructive (cor de texto/hover até aqui),
+// sem um par de "foreground" pra usar como fill de botão destrutivo (ex.: confirmar remoção).
 @theme inline {
   --color-input-background: var(--input-background);
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
 :root {
@@ -46,6 +49,7 @@
   --accent: oklch(0.967 0.003 264.542);
   --accent-foreground: oklch(0.21 0.034 264.665);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: #ffffff;
   --border: oklch(0.928 0.006 264.531);
   --input: oklch(0.928 0.006 264.531);
   --input-background: #f3f3f5;
