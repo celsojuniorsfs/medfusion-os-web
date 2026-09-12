@@ -4,10 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "npm run generate:api-types:remote && ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "generate:api-types": "openapi-typescript ../medfusion-os-api/docs/openapi.yaml -o src/app/core/api-types.ts"
+    "generate:api-types": "openapi-typescript ../medfusion-os-api/docs/openapi.yaml -o src/app/core/api-types.ts",
+    "generate:api-types:remote": "openapi-typescript https://raw.githubusercontent.com/celsojuniorsfs/medfusion-os-api/main/docs/openapi.yaml -o src/app/core/api-types.ts"
   },
   "private": true,
   "packageManager": "npm@12.0.2",

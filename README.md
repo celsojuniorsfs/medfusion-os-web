@@ -77,6 +77,11 @@ npm start                    # ng serve — http://localhost:4200
 fonte da verdade (decisão da F1). Rode `npm run generate:api-types` de novo sempre que o
 contrato da API mudar.
 
+`npm run build` (o que a Vercel roda) usa `generate:api-types:remote` em vez do de cima — busca o
+`openapi.yaml` direto do GitHub (`celsojuniorsfs/medfusion-os-api` é público) em vez da pasta
+irmã, que só existe na sua máquina. Builds de produção sempre refletem o contrato realmente
+publicado no `main` da API, nunca uma mudança local ainda não commitada lá.
+
 `package.json` tem um `overrides` pro `openapi-typescript` (força aceitar o TypeScript 6.x do
 projeto, que Angular 22 exige — `openapi-typescript@7.13.0`, a versão mais recente, ainda declara
 peer em `^5.x`). Não é uma gambiarra temporária esperando eu trocar de pacote: o pacote em si
