@@ -54,8 +54,27 @@ describe('toTitleCase', () => {
     expect(toTitleCase('CELSO LUIZ TESTE LTDA')).toBe('Celso Luiz Teste Ltda');
   });
 
-  it('capitalizes the first letter of each word from an all-lowercase name', () => {
-    expect(toTitleCase('elza costa de andrade')).toBe('Elza Costa De Andrade');
+  it('lowercases particles ("de", "do"...) that are not the first word', () => {
+    expect(toTitleCase('elza costa de andrade')).toBe('Elza Costa de Andrade');
+    expect(toTitleCase('santa fé do sul')).toBe('Santa Fé do Sul');
+  });
+
+  it('capitalizes a particle when it is the first word of the whole name', () => {
+    expect(toTitleCase('da silva')).toBe('Da Silva');
+  });
+
+  it('capitalizes the letter right after a hyphen', () => {
+    expect(toTitleCase('jean-pierre')).toBe('Jean-Pierre');
+    expect(toTitleCase('ana-clara')).toBe('Ana-Clara');
+  });
+
+  it('capitalizes the letter right after an apostrophe', () => {
+    expect(toTitleCase("o'connor")).toBe("O'Connor");
+  });
+
+  it('treats a leading "d\'" as a lowercase particle unless it is the first word', () => {
+    expect(toTitleCase("maria d'ávila")).toBe("Maria d'Ávila");
+    expect(toTitleCase("d'ávila")).toBe("D'Ávila");
   });
 
   it('preserves accented characters and trims surrounding whitespace', () => {
