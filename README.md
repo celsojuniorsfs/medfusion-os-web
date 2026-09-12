@@ -88,6 +88,16 @@ peer em `^5.x`). Não é uma gambiarra temporária esperando eu trocar de pacote
 funciona bem com TS 6 (testado rodando o script de verdade), só o `peerDependencies` declarado
 está atrás. Revisitar quando o mantenedor atualizar o range.
 
+`@spartan-ng/cli` foi removido (10/09/2026) — só existia pra tentar usar o gerador
+`ng g @spartan-ng/cli:ui`, que não funciona de forma não interativa neste ambiente (assistente de
+múltiplas etapas que trava até com input automatizado); os componentes do design system foram
+todos escritos à mão em vez disso (`@spartan-ng/brain`, a biblioteca dos componentes headless,
+continua — essa é usada de verdade). Remover cortou a árvore de dependências de 874 pra 419
+pacotes e zerou as vulnerabilidades reportadas pelo `npm audit` (vinham todas do Nx que a CLI
+trazia junto). `package.json` também tem um `allowScripts` aprovando os scripts de instalação de
+`esbuild`/`lmdb`/`msgpackr-extract`/`@parcel/watcher` — dependências legítimas do próprio
+`@angular/build`, geradas via `npm install-scripts approve <pkg>`.
+
 ## Escopo da v1
 
 - Autenticação de técnicos (login simples, sem papéis/permissões)
