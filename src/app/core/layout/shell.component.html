@@ -1,6 +1,14 @@
 <div class="min-h-dvh bg-muted/40">
   <header class="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4">
     <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="-ml-1 flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent md:hidden"
+        aria-label="Abrir menu"
+        (click)="toggleSidebar()"
+      >
+        <i-lucide name="menu" [size]="20" />
+      </button>
       <img src="logo-icon.png" alt="" class="h-7 w-auto" />
       <span class="text-base font-semibold">Med Fusion OS</span>
     </div>
@@ -15,7 +23,7 @@
         {{ userInitial() }}
       </span>
       @if (auth.user(); as user) {
-        <span>{{ user.name }}</span>
+        <span class="hidden sm:inline">{{ user.name }}</span>
       }
       <i-lucide name="chevron-down" [size]="14" class="text-muted-foreground" />
     </button>
@@ -38,13 +46,31 @@
   </header>
 
   <div class="flex">
-    <aside class="w-64 shrink-0 border-r border-border bg-card p-4">
+    <!-- Abaixo de md, o backdrop escurece o conteúdo atrás do drawer aberto e fecha ao ser tocado. -->
+    @if (sidebarOpen()) {
+      <div class="fixed inset-0 z-30 bg-black/50 md:hidden" (click)="closeSidebar()"></div>
+    }
+
+    <aside
+      class="fixed inset-y-0 left-0 z-40 w-64 shrink-0 -translate-x-full border-r border-border bg-card p-4 transition-transform duration-200 md:static md:translate-x-0"
+      [class.translate-x-0]="sidebarOpen()"
+    >
+      <button
+        type="button"
+        class="mb-2 flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent md:hidden"
+        aria-label="Fechar menu"
+        (click)="closeSidebar()"
+      >
+        <i-lucide name="x" [size]="18" />
+      </button>
+
       <nav class="flex flex-col gap-1">
         @for (item of navItems; track item.path) {
           <a
             [routerLink]="item.path"
             routerLinkActive="bg-primary! text-primary-foreground!"
             class="flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            (click)="closeSidebar()"
           >
             <i-lucide [name]="item.icon" [size]="18" />
             {{ item.label }}
@@ -53,7 +79,7 @@
       </nav>
     </aside>
 
-    <main class="flex-1 p-6">
+    <main class="min-w-0 flex-1 p-4 md:p-6">
       <router-outlet />
     </main>
   </div>

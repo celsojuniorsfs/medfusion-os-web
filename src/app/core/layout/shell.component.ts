@@ -1,5 +1,5 @@
 import { CdkMenuModule } from '@angular/cdk/menu';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthSessionStore } from '../auth/auth-session.store';
@@ -35,4 +35,16 @@ export class ShellComponent {
   ];
 
   protected readonly userInitial = computed(() => this.auth.user()?.name?.charAt(0).toUpperCase() ?? '?');
+
+  // Sidebar vira um drawer abaixo de md (768px) — escondido por padrão, aberto pelo hambúrguer do
+  // header. Acima de md continua sempre visível (ver shell.component.html).
+  protected readonly sidebarOpen = signal(false);
+
+  protected toggleSidebar(): void {
+    this.sidebarOpen.update((open) => !open);
+  }
+
+  protected closeSidebar(): void {
+    this.sidebarOpen.set(false);
+  }
 }
