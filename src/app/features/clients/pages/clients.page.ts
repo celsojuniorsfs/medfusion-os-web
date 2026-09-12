@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule } from 'lucide-angular';
+import { LucideChevronLeft, LucideChevronRight, LucidePencil, LucidePlus, LucideSearch, LucideTrash } from '@lucide/angular';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { ClientsStore } from '../data-access/clients.store';
 
@@ -9,7 +9,16 @@ import { ClientsStore } from '../data-access/clients.store';
  */
 @Component({
   selector: 'app-clients-page',
-  imports: [RouterLink, LucideAngularModule, CardComponent],
+  imports: [
+    RouterLink,
+    CardComponent,
+    LucidePlus,
+    LucideSearch,
+    LucidePencil,
+    LucideTrash,
+    LucideChevronLeft,
+    LucideChevronRight,
+  ],
   templateUrl: './clients.page.html',
 })
 export class ClientsPage implements OnInit, OnDestroy {

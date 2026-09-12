@@ -8,14 +8,14 @@
       routerLink="novo"
       class="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto"
     >
-      <i-lucide name="plus" [size]="16" />
+      <svg lucidePlus [size]="16"></svg>
       Novo Cliente
     </a>
   </div>
 
   <div class="relative max-w-sm">
     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
-      <i-lucide name="search" [size]="16" class="text-muted-foreground" />
+      <svg lucideSearch [size]="16" class="text-muted-foreground"></svg>
     </span>
     <input
       type="search"
@@ -74,7 +74,7 @@
                       aria-label="Editar"
                       title="Editar"
                     >
-                      <i-lucide name="pencil" [size]="16" />
+                      <svg lucidePencil [size]="16"></svg>
                     </a>
                     <button
                       type="button"
@@ -83,7 +83,7 @@
                       aria-label="Remover"
                       title="Remover"
                     >
-                      <i-lucide name="trash-2" [size]="16" />
+                      <svg lucideTrash [size]="16"></svg>
                     </button>
                   </div>
                 </td>
@@ -104,7 +104,7 @@
             (click)="goToPage(store.page() - 1)"
             class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
           >
-            <i-lucide name="chevron-left" [size]="14" />
+            <svg lucideChevronLeft [size]="14"></svg>
             Anterior
           </button>
           <button
@@ -114,7 +114,7 @@
             class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
           >
             Próxima
-            <i-lucide name="chevron-right" [size]="14" />
+            <svg lucideChevronRight [size]="14"></svg>
           </button>
         </div>
       </div>
