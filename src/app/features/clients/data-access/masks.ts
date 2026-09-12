@@ -63,3 +63,15 @@ export function formatCep(value: string): string {
 
   return digits.replace(/^(\d{5})(\d)/, '$1-$2');
 }
+
+/**
+ * Nome/razão social digitado direto do cartão CNPJ costuma vir todo em caixa alta — normaliza pra
+ * "Primeira Letra De Cada Palavra Maiúscula" (sem tratamento especial pra preposições) não importa
+ * como o usuário digitou.
+ */
+export function toTitleCase(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+}

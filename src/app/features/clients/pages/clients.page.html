@@ -44,28 +44,31 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-border text-left text-muted-foreground">
-              <th class="px-4 py-3 font-medium">Tipo</th>
-              <th class="px-4 py-3 font-medium">Razão social / Nome</th>
-              <th class="px-4 py-3 font-medium">CPF/CNPJ</th>
-              <th class="px-4 py-3 font-medium">Telefone</th>
-              <th class="px-4 py-3 font-medium">Cidade</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Tipo</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">
+                <span class="sm:hidden">Cliente</span>
+                <span class="hidden sm:inline">Razão social / Nome</span>
+              </th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">CPF/CNPJ</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Telefone</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Cidade</th>
               <th class="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
           <tbody>
             @for (client of store.entities(); track client.id) {
               <tr class="border-b border-border last:border-0 hover:bg-accent/50">
-                <td class="px-4 py-3">
+                <td class="whitespace-nowrap px-4 py-3">
                   <span
                     class="inline-flex h-5 items-center rounded-full bg-accent px-2 text-xs font-medium text-accent-foreground"
                   >
                     {{ client.person_type === 'individual' ? 'PF' : 'PJ' }}
                   </span>
                 </td>
-                <td class="px-4 py-3">{{ client.name }}</td>
-                <td class="px-4 py-3">{{ client.tax_id }}</td>
-                <td class="px-4 py-3">{{ client.phone || '—' }}</td>
-                <td class="px-4 py-3">{{ client.city || '—' }}</td>
+                <td class="max-w-[10rem] truncate px-4 py-3">{{ toTitleCase(client.name ?? '') }}</td>
+                <td class="whitespace-nowrap px-4 py-3">{{ formatTaxId(client.tax_id ?? '', client.person_type) }}</td>
+                <td class="whitespace-nowrap px-4 py-3">{{ client.phone || '—' }}</td>
+                <td class="whitespace-nowrap px-4 py-3">{{ client.city ? toTitleCase(client.city) : '—' }}</td>
                 <td class="px-4 py-3">
                   <div class="flex justify-end gap-1">
                     <a
