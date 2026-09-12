@@ -42,6 +42,9 @@ src/app/core/api-types.ts
 /libpeerconnection.log
 testem.log
 /typings
+
+# Criado pelo `vercel link` / primeiro deploy — configuração local do CLI, não do projeto.
+.vercel
 __screenshots__/
 
 # System files
