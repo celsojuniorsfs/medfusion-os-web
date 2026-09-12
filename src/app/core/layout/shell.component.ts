@@ -1,7 +1,7 @@
 import { CdkMenuModule } from '@angular/cdk/menu';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { LucideAngularModule } from 'lucide-angular';
+import { LucideChevronDown, LucideDynamicIcon, LucideLogOut, LucideMenu, LucideX } from '@lucide/angular';
 import { AuthSessionStore } from '../auth/auth-session.store';
 
 interface NavItem {
@@ -22,7 +22,11 @@ interface NavItem {
     RouterLink,
     RouterLinkActive,
     CdkMenuModule,
-    LucideAngularModule,
+    LucideMenu,
+    LucideX,
+    LucideChevronDown,
+    LucideLogOut,
+    LucideDynamicIcon,
   ],
   templateUrl: './shell.component.html',
 })

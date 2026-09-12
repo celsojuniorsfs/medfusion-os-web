@@ -7,7 +7,7 @@
         aria-label="Abrir menu"
         (click)="toggleSidebar()"
       >
-        <i-lucide name="menu" [size]="20" />
+        <svg lucideMenu [size]="20"></svg>
       </button>
       <img src="logo-icon.png" alt="" class="h-7 w-auto" />
       <span class="text-base font-semibold">Med Fusion OS</span>
@@ -25,7 +25,7 @@
       @if (auth.user(); as user) {
         <span class="hidden sm:inline">{{ user.name }}</span>
       }
-      <i-lucide name="chevron-down" [size]="14" class="text-muted-foreground" />
+      <svg lucideChevronDown [size]="14" class="text-muted-foreground"></svg>
     </button>
 
     <ng-template #userMenu>
@@ -38,7 +38,7 @@
           class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-accent"
           (click)="auth.logout()"
         >
-          <i-lucide name="log-out" [size]="14" />
+          <svg lucideLogOut [size]="14"></svg>
           Sair
         </button>
       </div>
@@ -61,7 +61,7 @@
         aria-label="Fechar menu"
         (click)="closeSidebar()"
       >
-        <i-lucide name="x" [size]="18" />
+        <svg lucideX [size]="18"></svg>
       </button>
 
       <nav class="flex flex-col gap-1">
@@ -72,7 +72,7 @@
             class="flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             (click)="closeSidebar()"
           >
-            <i-lucide [name]="item.icon" [size]="18" />
+            <svg [lucideIcon]="item.icon" [size]="18"></svg>
             {{ item.label }}
           </a>
         }
