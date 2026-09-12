@@ -26,12 +26,12 @@
     />
   </div>
 
-  <ui-card>
-    @if (store.loading()) {
-      <p class="p-6 text-sm text-muted-foreground">Carregando...</p>
-    } @else if (store.error()) {
-      <p class="p-6 text-sm text-destructive">{{ store.error() }}</p>
-    } @else if (store.entities().length === 0) {
+  @if (store.loading()) {
+    <ui-card><p class="p-6 text-sm text-muted-foreground">Carregando...</p></ui-card>
+  } @else if (store.error()) {
+    <ui-card><p class="p-6 text-sm text-destructive">{{ store.error() }}</p></ui-card>
+  } @else if (store.entities().length === 0) {
+    <ui-card>
       <p class="p-6 text-sm text-muted-foreground">
         @if (store.search()) {
           Nenhum cliente encontrado para "{{ store.search() }}".
@@ -39,16 +39,85 @@
           Nenhum cliente cadastrado ainda.
         }
       </p>
-    } @else {
+    </ui-card>
+  } @else {
+    <!-- Abaixo de 768px: um card por cliente, sem tabela — ver docs/mobile no PR. -->
+    <div class="flex flex-col gap-3 md:hidden">
+      @for (client of store.entities(); track client.id) {
+        <ui-card class="p-4">
+          <div class="flex items-start justify-between gap-2">
+            <a [routerLink]="[client.id, 'editar']" class="font-medium hover:underline">
+              {{ toTitleCase(client.name ?? '') }}
+            </a>
+            <div class="flex shrink-0 gap-1">
+              <a
+                [routerLink]="[client.id, 'editar']"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                aria-label="Editar"
+                title="Editar"
+              >
+                <svg lucidePencil [size]="16"></svg>
+              </a>
+              <button
+                type="button"
+                (click)="remove(client.id, client.name ?? '')"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                aria-label="Remover"
+                title="Remover"
+              >
+                <svg lucideTrash [size]="16"></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <span class="inline-flex h-5 items-center rounded-full bg-accent px-2 text-xs font-medium text-accent-foreground">
+              {{ client.person_type === 'individual' ? 'PF' : 'PJ' }}
+            </span>
+            @if (client.phone) {
+              <a [href]="'tel:' + client.phone" class="hover:underline">{{ client.phone }}</a>
+            } @else {
+              <span>—</span>
+            }
+          </div>
+
+          <button
+            type="button"
+            (click)="toggleExpanded(client.id)"
+            class="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <svg lucideChevronDown [size]="14" [class.rotate-180]="isExpanded(client.id)"></svg>
+            {{ isExpanded(client.id) ? 'Ver menos' : 'Ver mais' }}
+          </button>
+
+          @if (isExpanded(client.id)) {
+            <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+              <dt class="text-muted-foreground">CPF/CNPJ</dt>
+              <dd>{{ formatTaxId(client.tax_id ?? '', client.person_type) }}</dd>
+              <dt class="text-muted-foreground">Cidade</dt>
+              <dd>{{ client.city ? toTitleCase(client.city) : '—' }}</dd>
+              <dt class="text-muted-foreground">E-mail</dt>
+              <dd>
+                @if (client.email) {
+                  <a [href]="'mailto:' + client.email" class="hover:underline">{{ client.email }}</a>
+                } @else {
+                  —
+                }
+              </dd>
+            </dl>
+          }
+        </ui-card>
+      }
+    </div>
+
+    <!-- A partir de 768px: a tabela de sempre. -->
+    <ui-card class="hidden md:block">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-border text-left text-muted-foreground">
               <th class="whitespace-nowrap px-4 py-3 font-medium">Tipo</th>
-              <th class="whitespace-nowrap px-4 py-3 font-medium">
-                <span class="sm:hidden">Cliente</span>
-                <span class="hidden sm:inline">Razão social / Nome</span>
-              </th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Razão social / Nome</th>
               <th class="whitespace-nowrap px-4 py-3 font-medium">CPF/CNPJ</th>
               <th class="whitespace-nowrap px-4 py-3 font-medium">Telefone</th>
               <th class="whitespace-nowrap px-4 py-3 font-medium">Cidade</th>
@@ -95,32 +164,32 @@
           </tbody>
         </table>
       </div>
+    </ui-card>
+  }
 
-      <div
-        class="flex flex-col gap-3 border-t border-border px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
-      >
-        <span>Página {{ store.page() }} de {{ store.lastPage() }} — {{ store.total() }} no total</span>
-        <div class="flex gap-1">
-          <button
-            type="button"
-            [disabled]="store.page() <= 1"
-            (click)="goToPage(store.page() - 1)"
-            class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
-          >
-            <svg lucideChevronLeft [size]="14"></svg>
-            Anterior
-          </button>
-          <button
-            type="button"
-            [disabled]="store.page() >= store.lastPage()"
-            (click)="goToPage(store.page() + 1)"
-            class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
-          >
-            Próxima
-            <svg lucideChevronRight [size]="14"></svg>
-          </button>
-        </div>
+  @if (!store.loading() && !store.error() && store.entities().length > 0) {
+    <div class="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <span>Página {{ store.page() }} de {{ store.lastPage() }} — {{ store.total() }} no total</span>
+      <div class="flex gap-1">
+        <button
+          type="button"
+          [disabled]="store.page() <= 1"
+          (click)="goToPage(store.page() - 1)"
+          class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
+        >
+          <svg lucideChevronLeft [size]="14"></svg>
+          Anterior
+        </button>
+        <button
+          type="button"
+          [disabled]="store.page() >= store.lastPage()"
+          (click)="goToPage(store.page() + 1)"
+          class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
+        >
+          Próxima
+          <svg lucideChevronRight [size]="14"></svg>
+        </button>
       </div>
-    }
-  </ui-card>
+    </div>
+  }
 </div>
