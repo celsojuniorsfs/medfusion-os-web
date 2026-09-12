@@ -1,4 +1,4 @@
-import { formatCep, formatCnpj, formatCpf, formatPhone, formatTaxId } from './masks';
+import { formatCep, formatCnpj, formatCpf, formatPhone, formatTaxId, toTitleCase } from './masks';
 
 describe('formatCpf', () => {
   it('formats progressively as digits are typed', () => {
@@ -46,5 +46,19 @@ describe('formatPhone', () => {
 describe('formatCep', () => {
   it('formats an 8-digit CEP', () => {
     expect(formatCep('15775000')).toBe('15775-000');
+  });
+});
+
+describe('toTitleCase', () => {
+  it('capitalizes the first letter of each word from an all-uppercase name', () => {
+    expect(toTitleCase('CELSO LUIZ TESTE LTDA')).toBe('Celso Luiz Teste Ltda');
+  });
+
+  it('capitalizes the first letter of each word from an all-lowercase name', () => {
+    expect(toTitleCase('elza costa de andrade')).toBe('Elza Costa De Andrade');
+  });
+
+  it('preserves accented characters and trims surrounding whitespace', () => {
+    expect(toTitleCase('  HOSPITAL SÃO LUCAS  ')).toBe('Hospital São Lucas');
   });
 });

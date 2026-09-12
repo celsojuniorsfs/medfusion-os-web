@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { LucideChevronLeft, LucideChevronRight, LucidePencil, LucidePlus, LucideSearch, LucideTrash } from '@lucide/angular';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { ClientsStore } from '../data-access/clients.store';
+import { formatTaxId, toTitleCase } from '../data-access/masks';
 
 /**
  * Listagem de clientes: busca (com debounce), paginação, ações de editar/remover.
@@ -24,6 +25,8 @@ import { ClientsStore } from '../data-access/clients.store';
 export class ClientsPage implements OnInit, OnDestroy {
   protected readonly store = inject(ClientsStore);
   protected readonly searchInput = signal('');
+  protected readonly formatTaxId = formatTaxId;
+  protected readonly toTitleCase = toTitleCase;
 
   private searchTimeout?: ReturnType<typeof setTimeout>;
 

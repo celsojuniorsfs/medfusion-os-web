@@ -6,10 +6,11 @@ import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { BRAZILIAN_STATES } from '../data-access/brazilian-states';
 import { ClientsStore } from '../data-access/clients.store';
-import { formatCep, formatPhone, formatTaxId } from '../data-access/masks';
+import { formatCep, formatPhone, formatTaxId, toTitleCase } from '../data-access/masks';
 
 type PersonType = 'individual' | 'company';
 type ClientInput = components['schemas']['ClientInput'];
+type TitleCaseField = 'name' | 'trade_name' | 'requester' | 'department' | 'address' | 'city';
 
 /**
  * Uma tela só pra criar e editar — os dois formulários são idênticos, só muda se existe um id
@@ -69,16 +70,16 @@ export class ClientFormPage implements OnInit {
 
       this.form.patchValue({
         person_type: personType,
-        name: client.name,
-        trade_name: client.trade_name ?? '',
+        name: toTitleCase(client.name ?? ''),
+        trade_name: toTitleCase(client.trade_name ?? ''),
         tax_id: formatTaxId(client.tax_id ?? '', personType),
         state_registration: client.state_registration ?? '',
-        requester: client.requester ?? '',
-        department: client.department ?? '',
+        requester: toTitleCase(client.requester ?? ''),
+        department: toTitleCase(client.department ?? ''),
         phone: client.phone ?? '',
         email: client.email ?? '',
-        address: client.address ?? '',
-        city: client.city ?? '',
+        address: toTitleCase(client.address ?? ''),
+        city: toTitleCase(client.city ?? ''),
         state: client.state ?? '',
         postal_code: formatCep(client.postal_code ?? ''),
       });
@@ -104,12 +105,23 @@ export class ClientFormPage implements OnInit {
     this.form.controls.tax_id.setValue(formatTaxId(value, this.personType()));
   }
 
+  onTitleCaseBlur(field: TitleCaseField, value: string): void {
+    this.form.controls[field].setValue(toTitleCase(value));
+  }
+
   onPhoneInput(value: string): void {
     this.form.controls.phone.setValue(formatPhone(value));
   }
 
   onPostalCodeInput(value: string): void {
     this.form.controls.postal_code.setValue(formatCep(value));
+  }
+
+  // Uma conta de e-mail é sempre minúscula (RFC 5321 trata só a parte antes do @ como
+  // case-sensitive na teoria, mas nenhum provedor de e-mail de verdade diferencia) — evita
+  // cadastros duplicados de fato ("Nome@x.com" vs "nome@x.com") por causa de digitação.
+  onEmailInput(value: string): void {
+    this.form.controls.email.setValue(value.toLowerCase());
   }
 
   async submit(): Promise<void> {
