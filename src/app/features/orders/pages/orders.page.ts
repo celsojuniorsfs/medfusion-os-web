@@ -13,7 +13,7 @@ import { CardComponent } from '../../../shared/ui/card.component';
         <h1 class="text-xl font-semibold">Ordens de Serviço</h1>
         <p class="text-sm text-muted-foreground">Criação, listagem e visualização de OS.</p>
       </div>
-      <ui-card class="p-6">
+      <ui-card class="p-4 md:p-6">
         <p class="text-sm">Em construção — criação, listagem e visualização de OS chegam na próxima etapa da F4.</p>
       </ui-card>
     </div>

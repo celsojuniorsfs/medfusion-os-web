@@ -11,11 +11,13 @@ import {
   LoaderCircle,
   LogOut,
   LucideAngularModule,
+  Menu,
   Pencil,
   Plus,
   Search,
   Trash2,
   Users,
+  X,
 } from 'lucide-angular';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
@@ -36,6 +38,8 @@ const icons = {
   Trash2,
   Plus,
   Search,
+  Menu,
+  X,
 };
 
 export const appConfig: ApplicationConfig = {
