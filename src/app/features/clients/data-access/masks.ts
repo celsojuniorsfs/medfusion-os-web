@@ -64,14 +64,40 @@ export function formatCep(value: string): string {
   return digits.replace(/^(\d{5})(\d)/, '$1-$2');
 }
 
+// Partículas que ficam minúsculas no meio do nome, mas maiúsculas se forem a primeira palavra do
+// nome inteiro (ex.: "Ana Costa de Souza" vs. "Da Silva" como sobrenome isolado no início).
+const LOWERCASE_PARTICLES = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+
 /**
  * Nome/razão social digitado direto do cartão CNPJ costuma vir todo em caixa alta — normaliza pra
- * "Primeira Letra De Cada Palavra Maiúscula" (sem tratamento especial pra preposições) não importa
- * como o usuário digitou.
+ * regras de nome próprio em português, não importa como o usuário digitou: primeira letra de cada
+ * palavra maiúscula, partículas ("de", "da", "do"...) minúsculas exceto na primeira palavra, e
+ * maiúscula depois de hífen/apóstrofo ("Ana-Clara", "O'Connor").
  */
 export function toTitleCase(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+  const words = value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+  return words
+    .map((word, index) => {
+      const isFirstWord = index === 0;
+
+      if (!isFirstWord && LOWERCASE_PARTICLES.has(word)) {
+        return word;
+      }
+
+      const capitalized = word.replace(
+        /(^|[-'])(\p{L})/gu,
+        (_match, boundary: string, letter: string) => boundary + letter.toUpperCase(),
+      );
+
+      // "d'Ávila" — o "d'" inicial é uma partícula (equivalente a "de"), então fica minúsculo a
+      // menos que seja a primeira palavra do nome inteiro (mesma regra acima, só que o "de" vem
+      // grudado sem espaço).
+      if (!isFirstWord && word.startsWith("d'")) {
+        return 'd' + capitalized.slice(1);
+      }
+
+      return capitalized;
+    })
+    .join(' ');
 }
