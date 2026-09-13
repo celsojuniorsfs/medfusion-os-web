@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { LucideWrench } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
@@ -20,7 +21,7 @@ type TitleCaseField = 'name' | 'trade_name' | 'requester' | 'department' | 'addr
  */
 @Component({
   selector: 'app-client-form-page',
-  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent],
+  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent, LucideWrench],
   templateUrl: './client-form.page.html',
 })
 export class ClientFormPage implements OnInit {
