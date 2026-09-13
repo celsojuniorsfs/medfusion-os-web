@@ -33,6 +33,31 @@ withHooks((store) => {
 Ver `features/clients/data-access/clients.store.ts` e `equipments.store.ts` para o padrão
 completo.
 
+## Fronteira entre features, confirmada por auditoria
+
+A auditoria de acoplamento de 13/09/2026 apagou `core/` e cada feature de verdade (branch
+descartável + `git rm -r` + `ng build`, revertido depois) pra confirmar o que o README já
+promete. Veio 100% limpo: zero import feature→feature, tudo passando por `core/` ou pela
+rota lazy em `app.routes.ts`. Duas coisas pra manter assim:
+
+- **`core/` é importado por toda feature — nunca o contrário.** `authGuard`,
+  `authInterceptor`, `AuthSessionStore`, `ShellComponent`: todos usados por
+  `features/identity`, `features/clients` e (quando crescer) `features/orders`. Nenhum
+  desses pode importar nada de dentro de `features/`.
+- **Entre features, o único import permitido é o *store* de outra feature** — nunca outro
+  arquivo do `data-access/` dela, nem `pages/`. O comentário em
+  `features/clients/data-access/equipments.store.ts` já antecipa isso: a futura feature de
+  Ordens vai importar `EquipmentsStore` (e provavelmente `ClientsStore`) pra montar o
+  seletor de equipamentos/cliente na tela de nova OS — isso é o uso sancionado. Importar
+  `equipments.ts` (o helper de busca client-side) ou qualquer coisa de
+  `features/clients/pages/` de dentro de `features/orders/` não seria: o store é a
+  superfície pública da feature, o resto é implementação interna dela.
+
+`features/orders/` hoje é um stub vazio (`OrdersStore` sem métodos). Quando crescer e
+passar a importar `EquipmentsStore`/`ClientsStore` de verdade, vale repetir o teste de
+deleção (apagar `features/clients/`, rodar `ng build`) pra confirmar que só esses imports
+de store quebram — nada mais.
+
 ## Testando SignalStore + localStorage: a leitura só acontece na construção
 
 `AuthSessionStore` lê o token do `localStorage` dentro do inicializador de `withState`
