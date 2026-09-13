@@ -8,6 +8,7 @@ import {
   LucidePlus,
   LucideSearch,
   LucideTrash,
+  LucideWrench,
 } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { CardComponent } from '../../../shared/ui/card.component';
@@ -32,6 +33,7 @@ import { formatTaxId, toTitleCase } from '../data-access/masks';
     LucideSearch,
     LucidePencil,
     LucideTrash,
+    LucideWrench,
     LucideChevronLeft,
     LucideChevronRight,
     LucideChevronDown,
