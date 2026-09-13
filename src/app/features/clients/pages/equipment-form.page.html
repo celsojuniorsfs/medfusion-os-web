@@ -19,10 +19,13 @@
           <input
             id="name"
             formControlName="name"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.name.invalid && form.controls.name.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
           @if (form.controls.name.hasError('required') && form.controls.name.touched) {
             <span class="text-xs text-destructive">Informe o equipamento</span>
+          } @else if (serverErrorMessage('name'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
 
@@ -31,8 +34,12 @@
           <input
             id="brand"
             formControlName="brand"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.brand.invalid && form.controls.brand.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('brand'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -40,8 +47,12 @@
           <input
             id="model"
             formControlName="model"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.model.invalid && form.controls.model.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('model'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -50,10 +61,13 @@
             id="serial_number"
             formControlName="serial_number"
             (blur)="onSerialNumberBlur($any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.serial_number.invalid && form.controls.serial_number.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
           @if (duplicateSerialWarning()) {
             <span class="text-xs text-muted-foreground">Já existe um equipamento com este número de série neste cliente.</span>
+          } @else if (serverErrorMessage('serial_number'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
 
@@ -62,8 +76,12 @@
           <input
             id="asset_tag"
             formControlName="asset_tag"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.asset_tag.invalid && form.controls.asset_tag.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('asset_tag'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5 md:col-span-2">
@@ -71,8 +89,12 @@
           <input
             id="accessories"
             formControlName="accessories"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.accessories.invalid && form.controls.accessories.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('accessories'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
       </div>
 
