@@ -1,0 +1,33 @@
+name: Tests
+
+# Achado do code review de 13/09/2026 (fecha web#49): não havia CI nenhum neste
+# repositório — testes e build só rodavam se alguém lembrasse de rodar localmente antes
+# de abrir a PR (a própria Vercel só builda em cima do merge, não antes).
+#
+# Sem lint: este projeto não tem ESLint configurado ainda (nenhum eslint.config.*/
+# .eslintrc* no repositório) — fica pra uma issue própria, não inventado aqui.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar testes
+        run: npm test -- --watch=false
+
+      - name: Build de produção
+        run: npm run build
