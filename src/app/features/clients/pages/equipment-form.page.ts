@@ -77,6 +77,12 @@ export class EquipmentFormPage implements OnInit {
     }
   }
 
+  // Mesma convenção de client-form.page: nunca mostra o texto que a API manda (sem lang/pt_BR
+  // publicado, vem em inglês) — só usa as chaves do erro 422 pra saber qual campo destacar.
+  serverErrorMessage(field: string): string | null {
+    return this.form.get(field)?.hasError('server') ? 'Verifique este campo.' : null;
+  }
+
   // Não bloqueia o cadastro — a API aceita N/S duplicado de propósito (ver equipments.store.ts).
   // É só um aviso: número de série às vezes é digitado errado ou fica em branco.
   onSerialNumberBlur(value: string): void {
@@ -109,11 +115,15 @@ export class EquipmentFormPage implements OnInit {
       toast.success(id ? 'Equipamento atualizado.' : 'Equipamento cadastrado.');
       await this.router.navigate(['/clients', this.clientId, 'equipamentos']);
     } catch (error) {
-      this.errorMessage.set(
-        error instanceof HttpErrorResponse && error.status === 422
-          ? 'Confira os campos destacados.'
-          : 'Não foi possível salvar o equipamento. Tente novamente.',
-      );
+      if (error instanceof HttpErrorResponse && error.status === 422) {
+        for (const field of Object.keys(error.error?.errors ?? {})) {
+          this.form.get(field)?.setErrors({ server: true });
+          this.form.get(field)?.markAsTouched();
+        }
+        this.errorMessage.set('Confira os campos destacados.');
+      } else {
+        this.errorMessage.set('Não foi possível salvar o equipamento. Tente novamente.');
+      }
     } finally {
       this.loading.set(false);
     }

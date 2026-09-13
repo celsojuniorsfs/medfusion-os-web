@@ -15,6 +15,18 @@ type PersonType = 'individual' | 'company';
 type ClientInput = components['schemas']['ClientInput'];
 type TitleCaseField = 'name' | 'trade_name' | 'requester' | 'department' | 'address' | 'city';
 
+// A API não tem lang/pt_BR publicado (só APP_LOCALE=pt_BR no .env, sem arquivo de tradução) — as
+// mensagens de validação sem `messages()` customizado na FormRequest voltam em inglês. Por isso
+// nunca mostramos o texto que a API manda: usamos só as CHAVES do JSON de erro (nomes de campo,
+// não traduzidos) pra saber o que destacar, com mensagens em português escritas por nós.
+const SERVER_FIELD_MESSAGES: Record<string, string> = {
+  person_type: 'Selecione o tipo de pessoa.',
+  tax_id: 'CPF/CNPJ inválido ou já cadastrado.',
+  email: 'E-mail inválido.',
+  state: 'Estado inválido.',
+  postal_code: 'CEP inválido — use 8 dígitos.',
+};
+
 /**
  * Uma tela só pra criar e editar — os dois formulários são idênticos, só muda se existe um id
  * na rota. Fecha as telas "novo" e "editar" das issues #34/#35.
@@ -131,6 +143,13 @@ export class ClientFormPage implements OnInit {
     this.form.controls.email.setValue(value.toLowerCase());
   }
 
+  // Mensagem em português pro campo que a API rejeitou no último submit — some sozinha assim que
+  // o usuário mexe de novo no campo (Angular recalcula a validade a partir dos validators reais
+  // do controle, nenhum pra a maioria destes, então o erro manual 'server' é descartado).
+  serverErrorMessage(field: string): string | null {
+    return this.form.get(field)?.hasError('server') ? (SERVER_FIELD_MESSAGES[field] ?? 'Verifique este campo.') : null;
+  }
+
   async submit(): Promise<void> {
     if (this.form.invalid || this.loading()) return;
 
@@ -155,11 +174,15 @@ export class ClientFormPage implements OnInit {
       toast.success(id ? 'Cliente atualizado.' : 'Cliente cadastrado.');
       await this.router.navigateByUrl('/clients');
     } catch (error) {
-      this.errorMessage.set(
-        error instanceof HttpErrorResponse && error.status === 422
-          ? 'Confira os campos destacados.'
-          : 'Não foi possível salvar o cliente. Tente novamente.',
-      );
+      if (error instanceof HttpErrorResponse && error.status === 422) {
+        for (const field of Object.keys(error.error?.errors ?? {})) {
+          this.form.get(field)?.setErrors({ server: true });
+          this.form.get(field)?.markAsTouched();
+        }
+        this.errorMessage.set('Confira os campos destacados.');
+      } else {
+        this.errorMessage.set('Não foi possível salvar o cliente. Tente novamente.');
+      }
     } finally {
       this.loading.set(false);
     }

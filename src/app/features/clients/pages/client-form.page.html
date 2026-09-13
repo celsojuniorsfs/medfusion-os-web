@@ -29,11 +29,15 @@
             id="person_type"
             formControlName="person_type"
             (change)="onPersonTypeChange($any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.person_type.invalid && form.controls.person_type.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           >
             <option value="company">Pessoa jurídica</option>
             <option value="individual">Pessoa física</option>
           </select>
+          @if (serverErrorMessage('person_type'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5 md:col-span-2">
@@ -42,10 +46,13 @@
             id="name"
             formControlName="name"
             (blur)="onTitleCaseBlur('name', $any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.name.invalid && form.controls.name.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
           @if (form.controls.name.hasError('required') && form.controls.name.touched) {
             <span class="text-xs text-destructive">Informe {{ isCompany() ? 'a razão social' : 'o nome' }}</span>
+          } @else if (serverErrorMessage('name'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
 
@@ -56,8 +63,12 @@
               id="trade_name"
               formControlName="trade_name"
               (blur)="onTitleCaseBlur('trade_name', $any($event.target).value)"
-              class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              [attr.aria-invalid]="form.controls.trade_name.invalid && form.controls.trade_name.touched ? true : null"
+              class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
             />
+            @if (serverErrorMessage('trade_name'); as message) {
+              <span class="text-xs text-destructive">{{ message }}</span>
+            }
           </div>
 
           <div class="flex flex-col gap-1.5">
@@ -65,8 +76,12 @@
             <input
               id="state_registration"
               formControlName="state_registration"
-              class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              [attr.aria-invalid]="form.controls.state_registration.invalid && form.controls.state_registration.touched ? true : null"
+              class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
             />
+            @if (serverErrorMessage('state_registration'); as message) {
+              <span class="text-xs text-destructive">{{ message }}</span>
+            }
           </div>
         }
 
@@ -77,10 +92,13 @@
             formControlName="tax_id"
             (input)="onTaxIdInput($any($event.target).value)"
             [attr.maxlength]="isCompany() ? 18 : 14"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.tax_id.invalid && form.controls.tax_id.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
           @if (form.controls.tax_id.hasError('required') && form.controls.tax_id.touched) {
             <span class="text-xs text-destructive">Informe o {{ isCompany() ? 'CNPJ' : 'CPF' }}</span>
+          } @else if (serverErrorMessage('tax_id'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
 
@@ -91,8 +109,12 @@
             formControlName="phone"
             (input)="onPhoneInput($any($event.target).value)"
             maxlength="15"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.phone.invalid && form.controls.phone.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('phone'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -101,8 +123,12 @@
             id="requester"
             formControlName="requester"
             (blur)="onTitleCaseBlur('requester', $any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.requester.invalid && form.controls.requester.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('requester'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -111,8 +137,12 @@
             id="department"
             formControlName="department"
             (blur)="onTitleCaseBlur('department', $any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.department.invalid && form.controls.department.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('department'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5 md:col-span-2">
@@ -121,8 +151,12 @@
             id="address"
             formControlName="address"
             (blur)="onTitleCaseBlur('address', $any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.address.invalid && form.controls.address.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('address'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -131,8 +165,12 @@
             id="city"
             formControlName="city"
             (blur)="onTitleCaseBlur('city', $any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.city.invalid && form.controls.city.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('city'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -140,13 +178,17 @@
           <select
             id="state"
             formControlName="state"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.state.invalid && form.controls.state.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           >
             <option value="">Selecione...</option>
             @for (uf of brazilianStates; track uf.code) {
               <option [value]="uf.code">{{ uf.name }}</option>
             }
           </select>
+          @if (serverErrorMessage('state'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -156,8 +198,12 @@
             type="email"
             formControlName="email"
             (input)="onEmailInput($any($event.target).value)"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('email'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -167,8 +213,12 @@
             formControlName="postal_code"
             (input)="onPostalCodeInput($any($event.target).value)"
             maxlength="9"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            [attr.aria-invalid]="form.controls.postal_code.invalid && form.controls.postal_code.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
+          @if (serverErrorMessage('postal_code'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          }
         </div>
       </div>
 
