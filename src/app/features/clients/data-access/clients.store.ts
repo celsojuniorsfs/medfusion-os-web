@@ -1,10 +1,18 @@
 import { HttpClient } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { addEntity, removeEntity, setAllEntities, updateEntity, withEntities } from '@ngrx/signals/entities';
+import { effect, inject } from '@angular/core';
+import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
+import {
+  addEntity,
+  removeAllEntities,
+  removeEntity,
+  setAllEntities,
+  updateEntity,
+  withEntities,
+} from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { components } from '../../../core/api-types';
+import { AuthSessionStore } from '../../../core/auth/auth-session.store';
 
 type Client = components['schemas']['Client'] & { id: string };
 type ClientInput = components['schemas']['ClientInput'];
@@ -96,5 +104,34 @@ export const ClientsStore = signalStore(
 
       return response.data;
     },
+
+    /** Ver EquipmentsStore.reset() — mesmo achado (code review de 13/09/2026), chamado do logout. */
+    reset(): void {
+      patchState(store, removeAllEntities(), {
+        loading: false,
+        error: null,
+        search: '',
+        page: 1,
+        lastPage: 1,
+        total: 0,
+      });
+    },
   })),
+  // `core/` não conhece nenhuma feature (ver README) — a dependência tem que ir nesta direção
+  // (a feature injeta o AuthSessionStore de core/, nunca o contrário). reset() dispara sempre
+  // que a sessão deixa de estar autenticada, incluindo o próprio carregamento inicial do app
+  // (sem sessão ainda) — inofensivo, já que resetar uma lista vazia não faz nada.
+  withHooks((store) => {
+    const auth = inject(AuthSessionStore);
+
+    return {
+      onInit() {
+        effect(() => {
+          if (!auth.isAuthenticated()) {
+            store.reset();
+          }
+        });
+      },
+    };
+  }),
 );

@@ -46,6 +46,7 @@ export class EquipmentsPage implements OnInit {
   protected readonly expandedIds = signal<ReadonlySet<string>>(new Set());
   protected readonly pendingRemoval = signal<{ id: string; name: string } | null>(null);
   protected readonly removing = signal(false);
+  protected readonly pageError = signal<string | null>(null);
 
   protected readonly filteredEquipments = computed(() =>
     this.store.entities().filter((equipment) => equipmentMatchesSearch(equipment, this.searchInput())),
@@ -57,7 +58,16 @@ export class EquipmentsPage implements OnInit {
   private readonly removeDialog = viewChild.required(ConfirmDialogComponent);
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.clientsStore.findOne(this.clientId), this.store.load(this.clientId)]);
+    // Achado do code review de 13/09/2026: findOne() do ClientsStore não tem try/catch próprio
+    // (ao contrário do load() do EquipmentsStore) — sem este try/catch aqui, um cliente
+    // inexistente/erro de rede virava uma promise rejeitada não tratada, deixando a página com
+    // "Catálogo de equipamentos do cliente." genérico e nenhum aviso de erro (ver client()
+    // no template, que só cai no fallback quando o cliente não foi carregado).
+    try {
+      await Promise.all([this.clientsStore.findOne(this.clientId), this.store.load(this.clientId)]);
+    } catch {
+      this.pageError.set('Não foi possível carregar este cliente.');
+    }
   }
 
   isExpanded(id: string): boolean {
