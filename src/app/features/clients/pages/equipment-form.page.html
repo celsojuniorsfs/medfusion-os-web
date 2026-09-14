@@ -89,15 +89,79 @@
         </div>
 
         <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="accessories" class="text-sm font-medium">Acessórios</label>
-          <input
-            id="accessories"
-            formControlName="accessories"
-            [attr.aria-invalid]="form.controls.accessories.invalid && form.controls.accessories.touched ? true : null"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
-          />
-          @if (serverErrorMessage('accessories'); as message) {
-            <span class="text-xs text-destructive">{{ message }}</span>
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Acessórios</span>
+            <label class="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                [checked]="noAccessories()"
+                (change)="onNoAccessoriesChange($any($event.target).checked)"
+                class="h-4 w-4 rounded border-input"
+              />
+              Sem acessórios
+            </label>
+          </div>
+
+          @if (!noAccessories()) {
+            <div class="relative">
+              <input
+                type="text"
+                placeholder="Buscar ou cadastrar um acessório..."
+                [value]="accessorySearch()"
+                (input)="onAccessorySearchInput($any($event.target).value)"
+                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+              @if (accessorySearch().trim()) {
+                <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+                  @for (accessory of filteredAccessories(); track accessory.id) {
+                    <button
+                      type="button"
+                      (click)="selectAccessory(accessory)"
+                      class="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                    >
+                      {{ accessory.name }}
+                    </button>
+                  }
+                  @if (canRegisterNewAccessory()) {
+                    <button
+                      type="button"
+                      (click)="registerNewAccessory(accessorySearch())"
+                      class="block w-full px-3 py-2 text-left text-sm text-primary hover:bg-accent"
+                    >
+                      + Cadastrar "{{ accessorySearch().trim() }}"
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (selectedAccessories().length > 0) {
+              <ul class="flex flex-col gap-1.5">
+                @for (item of selectedAccessories(); track item.accessory_id ?? item.name; let i = $index) {
+                  <li class="flex items-center gap-2 rounded-md border border-input px-3 py-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      [value]="item.quantity"
+                      (change)="updateAccessoryQuantity(i, +$any($event.target).value)"
+                      class="h-8 w-16 rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    />
+                    <span class="flex-1 text-sm">{{ item.name }}</span>
+                    <button
+                      type="button"
+                      (click)="removeAccessory(i)"
+                      class="text-xs text-destructive hover:underline"
+                    >
+                      Remover
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          }
+
+          @if (accessoriesTouched() && !accessoriesValid()) {
+            <span class="text-xs text-destructive">Informe ao menos um acessório, ou marque "Sem acessórios"</span>
           }
         </div>
       </div>
