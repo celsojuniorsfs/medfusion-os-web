@@ -1,9 +1,10 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideWrench } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
+import { firstValueFrom } from 'rxjs';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
@@ -23,9 +24,18 @@ const SERVER_FIELD_MESSAGES: Record<string, string> = {
   person_type: 'Selecione o tipo de pessoa.',
   tax_id: 'CPF/CNPJ inválido ou já cadastrado.',
   email: 'E-mail inválido.',
+  phone: 'Informe o telefone.',
   state: 'Estado inválido.',
   postal_code: 'CEP inválido — use 8 dígitos.',
 };
+
+/** Campos que a gente usa da resposta do ViaCEP — só o que interessa pro autopreenchimento. */
+interface ViaCepAddress {
+  logradouro?: string;
+  localidade?: string;
+  uf?: string;
+  erro?: boolean;
+}
 
 /**
  * Uma tela só pra criar e editar — os dois formulários são idênticos, só muda se existe um id
@@ -41,6 +51,7 @@ export class ClientFormPage implements OnInit {
   private readonly store = inject(ClientsStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
 
   protected readonly clientId = signal<string | null>(null);
   protected readonly isEditing = computed(() => this.clientId() !== null);
@@ -67,8 +78,8 @@ export class ClientFormPage implements OnInit {
     state_registration: [''],
     requester: [''],
     department: [''],
-    phone: [''],
-    email: [''],
+    phone: ['', Validators.required],
+    email: ['', Validators.required],
     address: [''],
     city: [''],
     state: [''],
@@ -133,7 +144,34 @@ export class ClientFormPage implements OnInit {
   }
 
   onPostalCodeInput(value: string): void {
-    this.form.controls.postal_code.setValue(formatCep(value));
+    const formatted = formatCep(value);
+    this.form.controls.postal_code.setValue(formatted);
+
+    // Dispara a busca só quando os 8 dígitos ficam completos — não em cada tecla antes disso,
+    // nem de novo a cada tecla depois (o CEP já tem tamanho fixo, não faz sentido debounce aqui).
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.length === 8) {
+      void this.fillAddressFromCep(digits);
+    }
+  }
+
+  // web#86: preenche endereço/cidade/UF a partir do CEP (ViaCEP, gratuito, sem autenticação).
+  // CEP inválido ou não encontrado (`{ erro: true }`) ou falha de rede não trava o formulário —
+  // só não preenche nada, o técnico continua podendo digitar o endereço à mão normalmente.
+  private async fillAddressFromCep(cep: string): Promise<void> {
+    try {
+      const result = await firstValueFrom(this.http.get<ViaCepAddress>(`https://viacep.com.br/ws/${cep}/json/`));
+
+      if (result.erro) return;
+
+      this.form.patchValue({
+        address: toTitleCase(result.logradouro ?? ''),
+        city: toTitleCase(result.localidade ?? ''),
+        state: result.uf ?? '',
+      });
+    } catch {
+      // Sem tratamento de propósito — ver comentário do método acima.
+    }
   }
 
   // Uma conta de e-mail é sempre minúscula (RFC 5321 trata só a parte antes do @ como
@@ -151,7 +189,17 @@ export class ClientFormPage implements OnInit {
   }
 
   async submit(): Promise<void> {
-    if (this.form.invalid || this.loading()) return;
+    if (this.loading()) return;
+
+    // Achado ao testar web#86: sem isso, clicar em Salvar com um campo obrigatório nunca tocado
+    // (ex.: alguém que não passa por telefone/e-mail antes de tentar salvar) não mostra nenhuma
+    // mensagem de erro em lugar nenhum — os spans de erro só aparecem com `.touched`, e o clique
+    // no botão em si não marca nada como touched. markAllAsTouched() resolve pra todos os campos
+    // obrigatórios de uma vez, não só os dois novos.
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
     this.loading.set(true);
     this.errorMessage.set(null);
