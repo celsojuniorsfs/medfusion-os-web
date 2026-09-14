@@ -40,8 +40,11 @@ export class EquipmentFormPage implements OnInit {
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
-    brand: [''],
-    model: [''],
+    // Obrigatórios desde api#92/web#87 — antes eram livres. Achado da issue: o técnico às vezes
+    // coloca uma marca (ex.: "Sonopus") no campo de equipamento por falta de organização; marca
+    // e modelo obrigatórios ajudam a manter o cadastro consistente.
+    brand: ['', Validators.required],
+    model: ['', Validators.required],
     serial_number: [''],
     asset_tag: [''],
     accessories: [''],
@@ -97,7 +100,15 @@ export class EquipmentFormPage implements OnInit {
   }
 
   async submit(): Promise<void> {
-    if (this.form.invalid || this.loading()) return;
+    if (this.loading()) return;
+
+    // Mesmo achado do web#86 em client-form.page: sem isso, clicar em Salvar com marca/modelo
+    // nunca tocados não mostra nenhuma mensagem de erro — os spans só aparecem com `.touched`,
+    // e o clique no botão em si não marca nada como touched.
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
     this.loading.set(true);
     this.errorMessage.set(null);
