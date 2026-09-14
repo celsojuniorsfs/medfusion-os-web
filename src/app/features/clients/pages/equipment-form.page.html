@@ -37,7 +37,9 @@
             [attr.aria-invalid]="form.controls.brand.invalid && form.controls.brand.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
-          @if (serverErrorMessage('brand'); as message) {
+          @if (form.controls.brand.hasError('required') && form.controls.brand.touched) {
+            <span class="text-xs text-destructive">Informe a marca</span>
+          } @else if (serverErrorMessage('brand'); as message) {
             <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
@@ -50,7 +52,9 @@
             [attr.aria-invalid]="form.controls.model.invalid && form.controls.model.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
-          @if (serverErrorMessage('model'); as message) {
+          @if (form.controls.model.hasError('required') && form.controls.model.touched) {
+            <span class="text-xs text-destructive">Informe o modelo</span>
+          } @else if (serverErrorMessage('model'); as message) {
             <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
