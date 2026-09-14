@@ -112,7 +112,9 @@
             [attr.aria-invalid]="form.controls.phone.invalid && form.controls.phone.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
-          @if (serverErrorMessage('phone'); as message) {
+          @if (form.controls.phone.hasError('required') && form.controls.phone.touched) {
+            <span class="text-xs text-destructive">Informe o telefone</span>
+          } @else if (serverErrorMessage('phone'); as message) {
             <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
@@ -201,7 +203,9 @@
             [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
-          @if (serverErrorMessage('email'); as message) {
+          @if (form.controls.email.hasError('required') && form.controls.email.touched) {
+            <span class="text-xs text-destructive">Informe o e-mail</span>
+          } @else if (serverErrorMessage('email'); as message) {
             <span class="text-xs text-destructive">{{ message }}</span>
           }
         </div>
