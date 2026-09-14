@@ -66,7 +66,13 @@ describe('ClientsStore', () => {
   it('create() adds the returned client to the entity collection', async () => {
     const store = TestBed.inject(ClientsStore);
 
-    const promise = store.create({ person_type: 'company', name: 'Novo Cliente', tax_id: '11222333000181' });
+    const promise = store.create({
+      person_type: 'company',
+      name: 'Novo Cliente',
+      tax_id: '11222333000181',
+      phone: '31999998888',
+      email: 'novocliente@medfusion.example',
+    });
     httpMock
       .expectOne(`${environment.apiUrl}/clients`)
       .flush({ data: aClient({ id: 'c2', name: 'Novo Cliente' }) });
