@@ -6,9 +6,25 @@ import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
+import { Accessory, accessoryMatchesSearch } from '../data-access/accessories';
+import { AccessoriesStore } from '../data-access/accessories.store';
 import { EquipmentsStore } from '../data-access/equipments.store';
 
-type EquipmentInput = components['schemas']['EquipmentInput'];
+// `EquipmentInput` gerado ainda descreve `accessories` como o texto livre antigo (a API PR que
+// estrutura isso, api#92, não está mergeada em main — ver o mesmo comentário em accessories.ts).
+// `Omit` + campos próprios aqui evita depender desse pedaço desatualizado do tipo gerado; troca
+// pelo tipo gerado de verdade quando a API mergear.
+type EquipmentInput = Omit<components['schemas']['EquipmentInput'], 'accessories'> & {
+  no_accessories: boolean;
+  accessories: Array<{ accessory_id?: string; name?: string; quantity: number }>;
+};
+
+/** Uma linha da lista de acessórios selecionados neste equipamento, antes de salvar. */
+interface SelectedAccessory {
+  accessory_id?: string;
+  name: string;
+  quantity: number;
+}
 
 /**
  * Uma tela só pra criar e editar, mesmo padrão de client-form.page. Sem toTitleCase em nenhum
@@ -27,6 +43,7 @@ type EquipmentInput = components['schemas']['EquipmentInput'];
 export class EquipmentFormPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(EquipmentsStore);
+  protected readonly accessoriesStore = inject(AccessoriesStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -38,6 +55,28 @@ export class EquipmentFormPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly duplicateSerialWarning = signal(false);
 
+  // Acessórios (api#92/web#87): campo de texto único vira uma lista, ligada ao catálogo global
+  // reaproveitável entre equipamentos — ver accessories.store.ts. Fora do form reativo de
+  // propósito (mesmo estilo já usado pra `personType` em client-form.page): é uma lista dinâmica
+  // com busca/adicionar/remover, não um valor único que Validators.required resolveria sozinho.
+  protected readonly noAccessories = signal(false);
+  protected readonly selectedAccessories = signal<SelectedAccessory[]>([]);
+  protected readonly accessorySearch = signal('');
+  // Só considera inválido depois que o técnico mexeu em algo — mesmo raciocínio do `.touched`
+  // dos outros campos, senão a mensagem apareceria já na primeira renderização da tela de novo.
+  protected readonly accessoriesTouched = signal(false);
+
+  protected readonly filteredAccessories = computed(() =>
+    this.accessoriesStore.entities().filter((accessory) => accessoryMatchesSearch(accessory, this.accessorySearch())),
+  );
+  // "Cadastrar novo" só aparece quando o texto digitado não bate com nenhum item do catálogo —
+  // senão o técnico digitaria de novo algo que já existe e criaria um duplicado sem querer.
+  protected readonly canRegisterNewAccessory = computed(() => {
+    const term = this.accessorySearch().trim();
+    return term.length > 0 && this.filteredAccessories().length === 0;
+  });
+  protected readonly accessoriesValid = computed(() => this.noAccessories() || this.selectedAccessories().length > 0);
+
   protected readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     // Obrigatórios desde api#92/web#87 — antes eram livres. Achado da issue: o técnico às vezes
@@ -47,14 +86,13 @@ export class EquipmentFormPage implements OnInit {
     model: ['', Validators.required],
     serial_number: [''],
     asset_tag: [''],
-    accessories: [''],
   });
 
   async ngOnInit(): Promise<void> {
     this.initialLoading.set(true);
 
     try {
-      await this.store.load(this.clientId);
+      await Promise.all([this.store.load(this.clientId), this.accessoriesStore.load()]);
 
       const id = this.equipmentId();
       if (!id) return;
@@ -71,8 +109,14 @@ export class EquipmentFormPage implements OnInit {
         model: equipment.model ?? '',
         serial_number: equipment.serial_number ?? '',
         asset_tag: equipment.asset_tag ?? '',
-        accessories: equipment.accessories ?? '',
       });
+
+      // `equipment.accessories` já vem estruturado da API (ver o comentário do tipo
+      // EquipmentInput acima) — o `Array.isArray` é só defensivo, pro tipo gerado desatualizado
+      // não quebrar em runtime se algum dia vier o formato antigo.
+      const existing = Array.isArray(equipment.accessories) ? (equipment.accessories as SelectedAccessory[]) : [];
+      this.selectedAccessories.set(existing.map((item) => ({ ...item })));
+      this.noAccessories.set(existing.length === 0);
     } catch {
       this.errorMessage.set('Não foi possível carregar os equipamentos deste cliente.');
     } finally {
@@ -84,6 +128,73 @@ export class EquipmentFormPage implements OnInit {
   // publicado, vem em inglês) — só usa as chaves do erro 422 pra saber qual campo destacar.
   serverErrorMessage(field: string): string | null {
     return this.form.get(field)?.hasError('server') ? 'Verifique este campo.' : null;
+  }
+
+  onNoAccessoriesChange(checked: boolean): void {
+    this.noAccessories.set(checked);
+    this.accessoriesTouched.set(true);
+
+    // Marcar "sem acessórios" com itens já escolhidos limparia silenciosamente uma escolha que o
+    // técnico fez — mais seguro deixar a lista como está e só escondê-la (ver template); ela some
+    // de vez só quando o formulário é enviado com no_accessories marcado.
+  }
+
+  onAccessorySearchInput(value: string): void {
+    this.accessorySearch.set(value);
+  }
+
+  // Escolher uma sugestão do catálogo — se o mesmo acessório já estiver na lista deste
+  // equipamento, soma 1 na quantidade em vez de duplicar a linha (confirmado com você).
+  selectAccessory(accessory: Accessory): void {
+    this.accessoriesTouched.set(true);
+
+    this.selectedAccessories.update((current) => {
+      const index = current.findIndex((item) => item.accessory_id === accessory.id);
+      if (index === -1) {
+        return [...current, { accessory_id: accessory.id, name: accessory.name, quantity: 1 }];
+      }
+
+      const updated = [...current];
+      updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
+      return updated;
+    });
+
+    this.accessorySearch.set('');
+  }
+
+  // "Cadastrar novo" — ainda sem accessory_id (a API resolve/cadastra no catálogo global ao
+  // salvar o equipamento, ver EquipmentController::resolveAccessories na API). Compara por nome
+  // (sem diferenciar maiúsculas) pra também somar quantidade em vez de duplicar, caso o técnico
+  // digite o mesmo nome novo duas vezes antes de salvar.
+  registerNewAccessory(name: string): void {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    this.accessoriesTouched.set(true);
+
+    this.selectedAccessories.update((current) => {
+      const index = current.findIndex((item) => !item.accessory_id && item.name.toLowerCase() === trimmed.toLowerCase());
+      if (index === -1) {
+        return [...current, { name: trimmed, quantity: 1 }];
+      }
+
+      const updated = [...current];
+      updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
+      return updated;
+    });
+
+    this.accessorySearch.set('');
+  }
+
+  updateAccessoryQuantity(index: number, quantity: number): void {
+    if (quantity < 1) return;
+
+    this.selectedAccessories.update((current) => current.map((item, i) => (i === index ? { ...item, quantity } : item)));
+  }
+
+  removeAccessory(index: number): void {
+    this.accessoriesTouched.set(true);
+    this.selectedAccessories.update((current) => current.filter((_, i) => i !== index));
   }
 
   // Não bloqueia o cadastro — a API aceita N/S duplicado de propósito (ver equipments.store.ts).
@@ -104,8 +215,10 @@ export class EquipmentFormPage implements OnInit {
 
     // Mesmo achado do web#86 em client-form.page: sem isso, clicar em Salvar com marca/modelo
     // nunca tocados não mostra nenhuma mensagem de erro — os spans só aparecem com `.touched`,
-    // e o clique no botão em si não marca nada como touched.
-    if (this.form.invalid) {
+    // e o clique no botão em si não marca nada como touched. accessoriesTouched acompanha o
+    // mesmo raciocínio pro seletor, que fica fora do form reativo.
+    this.accessoriesTouched.set(true);
+    if (this.form.invalid || !this.accessoriesValid()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -113,15 +226,30 @@ export class EquipmentFormPage implements OnInit {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    const input: EquipmentInput = this.form.getRawValue();
+    const input: EquipmentInput = {
+      ...this.form.getRawValue(),
+      no_accessories: this.noAccessories(),
+      accessories: this.noAccessories() ? [] : this.selectedAccessories(),
+    };
     const id = this.equipmentId();
 
     try {
-      if (id) {
-        await this.store.update(this.clientId, id, input);
-      } else {
-        await this.store.create(this.clientId, input);
-      }
+      // `as unknown as ...` — stopgap até api#98 (API PR2) mergear: o schema gerado ainda
+      // descreve `accessories` como o texto livre antigo (ver comentário no tipo EquipmentInput
+      // acima). Runtime já manda o formato novo, só o tipo estático que ainda não sabe disso.
+      const apiInput = input as unknown as components['schemas']['EquipmentInput'];
+      const saved = id
+        ? await this.store.update(this.clientId, id, apiInput)
+        : await this.store.create(this.clientId, apiInput);
+
+      // Acessórios novos (sem accessory_id antes de salvar) voltam com o id definitivo na
+      // resposta — entram no catálogo local pra reaproveitar na mesma sessão sem recarregar.
+      const savedAccessories = Array.isArray(saved.accessories) ? (saved.accessories as SelectedAccessory[]) : [];
+      this.accessoriesStore.upsertFromEquipment(
+        savedAccessories
+          .filter((item): item is SelectedAccessory & { accessory_id: string } => !!item.accessory_id)
+          .map((item) => ({ id: item.accessory_id, name: item.name })),
+      );
 
       toast.success(id ? 'Equipamento atualizado.' : 'Equipamento cadastrado.');
       await this.router.navigate(['/clients', this.clientId, 'equipamentos']);
