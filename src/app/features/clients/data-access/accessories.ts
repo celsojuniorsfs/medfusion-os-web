@@ -1,14 +1,9 @@
-/**
- * Catálogo global de acessórios (api#92) — schema ainda não existe em api-types.ts (a PR da API
- * que cria o módulo Accessories não está mergeada em main ainda, e o script de geração de tipos
- * sempre puxa de lá, ver package.json). Interface escrita à mão de propósito, mesmo padrão já
- * usado em client-form.page.ts pro ViaCEP (`ViaCepAddress`) — troca pelo tipo gerado
- * (`components['schemas']['Accessory']`) quando a API mergear.
- */
-export interface Accessory {
-  id: string;
-  name: string;
-}
+import { components } from '../../../core/api-types';
+
+// `& { id: string; name: string }` — mesmo padrão já usado em equipments.store.ts (`Equipment`):
+// o schema gerado marca os dois como opcionais (nenhum `required` declarado no openapi.yaml pro
+// schema de resposta), mas a API sempre devolve os dois preenchidos de verdade.
+export type Accessory = components['schemas']['Accessory'] & { id: string; name: string };
 
 /**
  * Filtro client-side do catálogo — a API não busca no servidor pra acessórios (GET devolve a

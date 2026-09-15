@@ -62,7 +62,7 @@ describe('EquipmentsStore', () => {
   it('create() adds the returned equipment to the entity collection', async () => {
     const store = TestBed.inject(EquipmentsStore);
 
-    const promise = store.create(CLIENT_ID, { name: 'Monitor' });
+    const promise = store.create(CLIENT_ID, { name: 'Monitor', brand: 'Marca', model: 'Modelo', no_accessories: true });
     httpMock
       .expectOne(`${environment.apiUrl}/clients/${CLIENT_ID}/equipments`)
       .flush({ data: anEquipment({ id: 'e2', name: 'Monitor' }) });
