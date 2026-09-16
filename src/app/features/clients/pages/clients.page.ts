@@ -97,6 +97,9 @@ export class ClientsPage implements OnInit, OnDestroy {
       this.removeDialog().close();
       toast.success('Cliente removido.');
     } catch {
+      // Fecha o diálogo antes do toast — senão o backdrop dele fica por cima da mensagem de erro
+      // (ver o mesmo comentário em catalog.page.ts::confirmRemove).
+      this.removeDialog().close();
       toast.error('Não foi possível remover o cliente — verifique se não há Ordens de Serviço vinculadas a ele.');
     } finally {
       this.removing.set(false);

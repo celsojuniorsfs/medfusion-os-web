@@ -211,6 +211,12 @@ export class CatalogPage implements OnInit {
       }
       this.removeDialog().close();
     } catch (error) {
+      // Fecha o diálogo antes do toast — senão o backdrop dele fica por cima da mensagem de
+      // erro (a confirmação usa Angular CDK Overlay, que renderiza no top layer do navegador via
+      // popover="manual"; nenhum z-index no toast consegue vencer isso enquanto o diálogo segue
+      // aberto).
+      this.removeDialog().close();
+
       // 409 = entrada em uso por algum equipamento — a mensagem da própria API já explica isso
       // (ver EquipmentModelController::destroy/AccessoryController::destroy), bem mais útil que
       // um texto genérico.

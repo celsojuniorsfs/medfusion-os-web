@@ -97,6 +97,9 @@ export class EquipmentsPage implements OnInit {
       this.removeDialog().close();
       toast.success('Equipamento removido.');
     } catch {
+      // Fecha o diálogo antes do toast — senão o backdrop dele fica por cima da mensagem de erro
+      // (ver o mesmo comentário em catalog.page.ts::confirmRemove).
+      this.removeDialog().close();
       toast.error('Não foi possível remover o equipamento.');
     } finally {
       this.removing.set(false);
