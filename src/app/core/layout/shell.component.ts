@@ -42,8 +42,8 @@ export class ShellComponent {
 
   protected readonly navItems: NavItem[] = [
     { path: '/clients', label: 'Clientes', icon: 'users' },
-    { path: '/orders', label: 'Ordens de Serviço', icon: 'clipboard-list' },
     { path: '/equipamentos', label: 'Equipamentos', icon: 'stethoscope' },
+    { path: '/orders', label: 'Ordens de Serviço', icon: 'clipboard-list' },
   ];
 
   protected readonly userInitial = computed(() => this.auth.user()?.name?.charAt(0).toUpperCase() ?? '?');
