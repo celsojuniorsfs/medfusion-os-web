@@ -10,6 +10,7 @@ import { Accessory, accessoryMatchesSearch } from '../data-access/accessories';
 import { AccessoriesStore } from '../data-access/accessories.store';
 import { EquipmentModel, equipmentModelLabel, equipmentModelMatchesSearch } from '../data-access/equipment-models';
 import { EquipmentModelsStore } from '../data-access/equipment-models.store';
+import { EquipmentPhotosStore } from '../data-access/equipment-photos.store';
 import { EquipmentsStore } from '../data-access/equipments.store';
 
 type EquipmentInput = components['schemas']['EquipmentInput'];
@@ -45,6 +46,7 @@ export class EquipmentFormPage implements OnInit {
   private readonly store = inject(EquipmentsStore);
   protected readonly accessoriesStore = inject(AccessoriesStore);
   protected readonly equipmentModelsStore = inject(EquipmentModelsStore);
+  protected readonly photosStore = inject(EquipmentPhotosStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -55,6 +57,12 @@ export class EquipmentFormPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly duplicateSerialWarning = signal(false);
+
+  // Fotos (api#102/web#93): registrar como o aparelho chegou, pra não ter divergência na
+  // devolução. Num cadastro NOVO o equipamento ainda não tem id, e sem id não há onde pendurar a
+  // foto — então os arquivos escolhidos ficam aqui em memória e sobem logo depois que o POST
+  // devolve o id (ver submit()). Ao editar, sobem na hora.
+  protected readonly pendingPhotos = signal<File[]>([]);
 
   // Modelo do equipamento (api#101/web#92): o catálogo global de modelos, reaproveitável entre
   // clientes. Escolher um modelo preenche nome/marca/modelo de uma vez — o pedido do cliente era
@@ -124,7 +132,14 @@ export class EquipmentFormPage implements OnInit {
       ]);
 
       const id = this.equipmentId();
-      if (!id) return;
+      if (!id) {
+        // Cadastro novo: o store é `providedIn: 'root'`, então sem isso a lista sobrevive da
+        // última edição aberta e as fotos de outro equipamento apareceriam aqui.
+        this.photosStore.reset();
+        return;
+      }
+
+      await this.photosStore.load(this.clientId, id);
 
       const equipment = this.store.entities().find((e) => e.id === id);
       if (!equipment) {
@@ -156,6 +171,39 @@ export class EquipmentFormPage implements OnInit {
   // publicado, vem em inglês) — só usa as chaves do erro 422 pra saber qual campo destacar.
   serverErrorMessage(field: string): string | null {
     return this.form.get(field)?.hasError('server') ? 'Verifique este campo.' : null;
+  }
+
+  /**
+   * Editando, sobe na hora. Cadastrando, guarda pra subir depois do POST — sem id do equipamento
+   * não existe endpoint pra onde mandar.
+   */
+  async onPhotosSelected(input: HTMLInputElement): Promise<void> {
+    const files = Array.from(input.files ?? []);
+    // Limpa o input pra escolher o mesmo arquivo de novo funcionar (o browser não dispara `change`
+    // pro mesmo valor duas vezes seguidas).
+    input.value = '';
+    if (files.length === 0) return;
+
+    const id = this.equipmentId();
+    if (!id) {
+      this.pendingPhotos.update((current) => [...current, ...files]);
+      return;
+    }
+
+    for (const file of files) {
+      await this.photosStore.upload(this.clientId, id, file);
+    }
+  }
+
+  removePendingPhoto(index: number): void {
+    this.pendingPhotos.update((current) => current.filter((_, i) => i !== index));
+  }
+
+  async removePhoto(photoId: string): Promise<void> {
+    const id = this.equipmentId();
+    if (!id) return;
+
+    await this.photosStore.remove(this.clientId, id, photoId);
   }
 
   onEquipmentModelSearchInput(value: string): void {
@@ -315,6 +363,21 @@ export class EquipmentFormPage implements OnInit {
           .filter((item): item is SelectedAccessory & { accessory_id: string } => !!item.accessory_id)
           .map((item) => ({ id: item.accessory_id, name: item.name })),
       );
+
+      // Fotos escolhidas antes de salvar um equipamento novo: só agora existe id pra pendurá-las.
+      // Uma foto recusada aqui não desfaz o cadastro (que já deu certo) — avisa e segue.
+      const pending = this.pendingPhotos();
+      if (pending.length > 0 && saved.id) {
+        const results = await Promise.all(
+          pending.map((file) => this.photosStore.upload(this.clientId, saved.id, file)),
+        );
+        this.pendingPhotos.set([]);
+
+        const failed = results.filter((ok) => !ok).length;
+        if (failed > 0) {
+          toast.error(`Equipamento salvo, mas ${failed} foto(s) não subiram. Edite o equipamento para tentar de novo.`);
+        }
+      }
 
       toast.success(id ? 'Equipamento atualizado.' : 'Equipamento cadastrado.');
       await this.router.navigate(['/clients', this.clientId, 'equipamentos']);
