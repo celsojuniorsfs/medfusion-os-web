@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LucideWrench } from '@lucide/angular';
+import { LucideStethoscope } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { firstValueFrom } from 'rxjs';
 import { components } from '../../../core/api-types';
@@ -43,7 +43,7 @@ interface ViaCepAddress {
  */
 @Component({
   selector: 'app-client-form-page',
-  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent, LucideWrench],
+  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent, LucideStethoscope],
   templateUrl: './client-form.page.html',
 })
 export class ClientFormPage implements OnInit {
