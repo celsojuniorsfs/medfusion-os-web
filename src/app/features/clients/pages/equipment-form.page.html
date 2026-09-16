@@ -15,10 +15,53 @@
     <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-1.5 md:col-span-2">
+          <label for="equipment-model-search" class="text-sm font-medium">Modelo cadastrado</label>
+          @if (selectedEquipmentModel(); as selected) {
+            <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
+              <span class="flex-1 text-sm">{{ equipmentModelLabel(selected) }}</span>
+              <span class="text-xs text-muted-foreground">do catálogo</span>
+            </div>
+          } @else {
+            <div class="relative">
+              <input
+                id="equipment-model-search"
+                type="text"
+                placeholder="Buscar um modelo já cadastrado (ex.: ultrassom, Sonopus)..."
+                [value]="equipmentModelSearch()"
+                (input)="onEquipmentModelSearchInput($any($event.target).value)"
+                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+              @if (equipmentModelSearch().trim()) {
+                <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+                  @for (equipmentModel of filteredEquipmentModels(); track equipmentModel.id) {
+                    <button
+                      type="button"
+                      (click)="selectEquipmentModel(equipmentModel)"
+                      class="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                    >
+                      {{ equipmentModelLabel(equipmentModel) }}
+                    </button>
+                  } @empty {
+                    <p class="px-3 py-2 text-sm text-muted-foreground">
+                      Nenhum modelo encontrado — preencha os campos abaixo e ele entra no catálogo ao salvar.
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          }
+          <span class="text-xs text-muted-foreground">
+            Escolher um modelo preenche equipamento, marca e modelo. Digitando neles à mão, o modelo entra no
+            catálogo ao salvar.
+          </span>
+        </div>
+
+        <div class="flex flex-col gap-1.5 md:col-span-2">
           <label for="name" class="text-sm font-medium">Equipamento</label>
           <input
             id="name"
             formControlName="name"
+            (input)="onModelFieldTyped()"
             [attr.aria-invalid]="form.controls.name.invalid && form.controls.name.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
@@ -34,6 +77,7 @@
           <input
             id="brand"
             formControlName="brand"
+            (input)="onModelFieldTyped()"
             [attr.aria-invalid]="form.controls.brand.invalid && form.controls.brand.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />
@@ -49,6 +93,7 @@
           <input
             id="model"
             formControlName="model"
+            (input)="onModelFieldTyped()"
             [attr.aria-invalid]="form.controls.model.invalid && form.controls.model.touched ? true : null"
             class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
           />

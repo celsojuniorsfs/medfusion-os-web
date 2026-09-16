@@ -8,6 +8,8 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { Accessory, accessoryMatchesSearch } from '../data-access/accessories';
 import { AccessoriesStore } from '../data-access/accessories.store';
+import { EquipmentModel, equipmentModelLabel, equipmentModelMatchesSearch } from '../data-access/equipment-models';
+import { EquipmentModelsStore } from '../data-access/equipment-models.store';
 import { EquipmentsStore } from '../data-access/equipments.store';
 
 type EquipmentInput = components['schemas']['EquipmentInput'];
@@ -42,6 +44,7 @@ export class EquipmentFormPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(EquipmentsStore);
   protected readonly accessoriesStore = inject(AccessoriesStore);
+  protected readonly equipmentModelsStore = inject(EquipmentModelsStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -52,6 +55,30 @@ export class EquipmentFormPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly duplicateSerialWarning = signal(false);
+
+  // Modelo do equipamento (api#101/web#92): o catálogo global de modelos, reaproveitável entre
+  // clientes. Escolher um modelo preenche nome/marca/modelo de uma vez — o pedido do cliente era
+  // parar de redigitar isso a cada aparelho. Fora do form reativo, mesmo raciocínio dos acessórios.
+  //
+  // `null` aqui não quer dizer "sem modelo": quer dizer que o técnico está digitando à mão em vez
+  // de escolher do catálogo. A API resolve pelo trio nome/marca/modelo e cadastra a entrada nova se
+  // precisar (ver EquipmentController::resolveEquipmentModel) — ou seja, todo equipamento acaba
+  // ligado ao catálogo de um jeito ou de outro.
+  protected readonly equipmentModelId = signal<string | null>(null);
+  protected readonly equipmentModelSearch = signal('');
+
+  protected readonly filteredEquipmentModels = computed(() =>
+    this.equipmentModelsStore
+      .entities()
+      .filter((equipmentModel) => equipmentModelMatchesSearch(equipmentModel, this.equipmentModelSearch())),
+  );
+
+  protected readonly selectedEquipmentModel = computed(() => {
+    const id = this.equipmentModelId();
+    return id ? (this.equipmentModelsStore.entities().find((model) => model.id === id) ?? null) : null;
+  });
+
+  protected readonly equipmentModelLabel = equipmentModelLabel;
 
   // Acessórios (api#92/web#87): campo de texto único vira uma lista, ligada ao catálogo global
   // reaproveitável entre equipamentos — ver accessories.store.ts. Fora do form reativo de
@@ -90,7 +117,11 @@ export class EquipmentFormPage implements OnInit {
     this.initialLoading.set(true);
 
     try {
-      await Promise.all([this.store.load(this.clientId), this.accessoriesStore.load()]);
+      await Promise.all([
+        this.store.load(this.clientId),
+        this.accessoriesStore.load(),
+        this.equipmentModelsStore.load(),
+      ]);
 
       const id = this.equipmentId();
       if (!id) return;
@@ -109,6 +140,8 @@ export class EquipmentFormPage implements OnInit {
         asset_tag: equipment.asset_tag ?? '',
       });
 
+      this.equipmentModelId.set(equipment.equipment_model_id ?? null);
+
       const existing = (equipment.accessories ?? []) as SelectedAccessory[];
       this.selectedAccessories.set(existing.map((item) => ({ ...item })));
       this.noAccessories.set(existing.length === 0);
@@ -123,6 +156,33 @@ export class EquipmentFormPage implements OnInit {
   // publicado, vem em inglês) — só usa as chaves do erro 422 pra saber qual campo destacar.
   serverErrorMessage(field: string): string | null {
     return this.form.get(field)?.hasError('server') ? 'Verifique este campo.' : null;
+  }
+
+  onEquipmentModelSearchInput(value: string): void {
+    this.equipmentModelSearch.set(value);
+  }
+
+  /** Escolher um modelo do catálogo preenche os três campos de uma vez — o ganho que o cliente pediu. */
+  selectEquipmentModel(equipmentModel: EquipmentModel): void {
+    this.equipmentModelId.set(equipmentModel.id);
+    this.form.patchValue({
+      name: equipmentModel.name,
+      brand: equipmentModel.brand ?? '',
+      model: equipmentModel.model ?? '',
+    });
+    this.equipmentModelSearch.set('');
+  }
+
+  /**
+   * Chamado quando o técnico digita à mão em nome/marca/modelo: solta o vínculo com a entrada do
+   * catálogo, senão o equipment_model_id enviado contradiria o texto que está na tela. A API
+   * reresolve pelo trio e cadastra a entrada nova se precisar.
+   *
+   * Só dispara em digitação de verdade — `patchValue` (que é como selectEquipmentModel preenche os
+   * campos) não emite evento de `input` no DOM, então não há risco de ele se desfazer sozinho.
+   */
+  onModelFieldTyped(): void {
+    this.equipmentModelId.set(null);
   }
 
   onNoAccessoriesChange(checked: boolean): void {
@@ -223,6 +283,7 @@ export class EquipmentFormPage implements OnInit {
 
     const input: EquipmentInput = {
       ...this.form.getRawValue(),
+      equipment_model_id: this.equipmentModelId(),
       no_accessories: this.noAccessories(),
       accessories: this.noAccessories() ? [] : this.selectedAccessories(),
     };
@@ -235,6 +296,19 @@ export class EquipmentFormPage implements OnInit {
 
       // Acessórios novos (sem accessory_id antes de salvar) voltam com o id definitivo na
       // resposta — entram no catálogo local pra reaproveitar na mesma sessão sem recarregar.
+      // O modelo resolvido pela API (existente ou cadastrado na hora) entra no catálogo local, pra
+      // reaproveitar no próximo cadastro da mesma sessão sem recarregar tudo.
+      if (saved.equipment_model_id) {
+        this.equipmentModelsStore.upsertFromEquipment([
+          {
+            id: saved.equipment_model_id,
+            name: saved.name ?? '',
+            brand: saved.brand ?? null,
+            model: saved.model ?? null,
+          },
+        ]);
+      }
+
       const savedAccessories = (saved.accessories ?? []) as SelectedAccessory[];
       this.accessoriesStore.upsertFromEquipment(
         savedAccessories
