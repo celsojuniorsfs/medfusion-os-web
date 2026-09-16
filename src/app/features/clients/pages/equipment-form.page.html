@@ -209,6 +209,73 @@
             <span class="text-xs text-destructive">Informe ao menos um acessório, ou marque "Sem acessórios"</span>
           }
         </div>
+
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+          <span class="text-sm font-medium">Fotos</span>
+          <p class="text-xs text-muted-foreground">
+            Registre como o aparelho chegou — ajuda a não ter divergência na devolução. JPG, PNG ou WEBP, até 8 MB
+            cada.
+          </p>
+
+          <!-- `capture="environment"` abre a câmera traseira direto no celular, que é o cenário real:
+               o técnico fotografando o aparelho na hora que recebe. No desktop vira um seletor de
+               arquivos normal. -->
+          <label
+            class="inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-2 rounded-md border border-input px-4 text-sm font-medium hover:bg-accent"
+          >
+            @if (photosStore.uploading()) {
+              <ui-spinner /> Enviando...
+            } @else {
+              Adicionar fotos
+            }
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              multiple
+              hidden
+              [disabled]="photosStore.uploading()"
+              (change)="onPhotosSelected($any($event.target))"
+            />
+          </label>
+
+          @if (photosStore.error(); as photoError) {
+            <span class="text-xs text-destructive">{{ photoError }}</span>
+          }
+
+          @if (photosStore.entities().length > 0) {
+            <ul class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              @for (photo of photosStore.entities(); track photo.id) {
+                <li class="group relative overflow-hidden rounded-md border border-input">
+                  <img [src]="photo.url" [alt]="photo.original_name" class="aspect-square w-full object-cover" />
+                  <button
+                    type="button"
+                    (click)="removePhoto(photo.id)"
+                    class="absolute right-1 top-1 rounded-md bg-background/90 px-2 py-1 text-xs text-destructive hover:bg-background"
+                  >
+                    Remover
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          <!-- Num cadastro novo o equipamento ainda não existe, então as fotos esperam aqui até o
+               POST devolver o id (ver submit()). -->
+          @if (pendingPhotos().length > 0) {
+            <ul class="mt-1 flex flex-col gap-1.5">
+              @for (file of pendingPhotos(); track file.name + file.lastModified; let i = $index) {
+                <li class="flex items-center gap-2 rounded-md border border-dashed border-input px-3 py-1.5">
+                  <span class="flex-1 truncate text-sm">{{ file.name }}</span>
+                  <span class="text-xs text-muted-foreground">sobe ao salvar</span>
+                  <button type="button" (click)="removePendingPhoto(i)" class="text-xs text-destructive hover:underline">
+                    Remover
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
 
       @if (errorMessage()) {
