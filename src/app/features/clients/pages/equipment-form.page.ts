@@ -10,16 +10,14 @@ import { Accessory, accessoryMatchesSearch } from '../data-access/accessories';
 import { AccessoriesStore } from '../data-access/accessories.store';
 import { EquipmentsStore } from '../data-access/equipments.store';
 
-// `EquipmentInput` gerado ainda descreve `accessories` como o texto livre antigo (a API PR que
-// estrutura isso, api#92, não está mergeada em main — ver o mesmo comentário em accessories.ts).
-// `Omit` + campos próprios aqui evita depender desse pedaço desatualizado do tipo gerado; troca
-// pelo tipo gerado de verdade quando a API mergear.
-type EquipmentInput = Omit<components['schemas']['EquipmentInput'], 'accessories'> & {
-  no_accessories: boolean;
-  accessories: Array<{ accessory_id?: string; name?: string; quantity: number }>;
-};
+type EquipmentInput = components['schemas']['EquipmentInput'];
 
-/** Uma linha da lista de acessórios selecionados neste equipamento, antes de salvar. */
+/**
+ * Uma linha da lista de acessórios selecionados neste equipamento, antes de salvar — mesmo
+ * formato de `components['schemas']['EquipmentAccessory']`, só que `name`/`quantity` sempre
+ * preenchidos aqui (o schema gerado marca os dois como opcionais só porque descreve o formato
+ * de entrada E saída ao mesmo tempo).
+ */
 interface SelectedAccessory {
   accessory_id?: string;
   name: string;
@@ -111,10 +109,7 @@ export class EquipmentFormPage implements OnInit {
         asset_tag: equipment.asset_tag ?? '',
       });
 
-      // `equipment.accessories` já vem estruturado da API (ver o comentário do tipo
-      // EquipmentInput acima) — o `Array.isArray` é só defensivo, pro tipo gerado desatualizado
-      // não quebrar em runtime se algum dia vier o formato antigo.
-      const existing = Array.isArray(equipment.accessories) ? (equipment.accessories as SelectedAccessory[]) : [];
+      const existing = (equipment.accessories ?? []) as SelectedAccessory[];
       this.selectedAccessories.set(existing.map((item) => ({ ...item })));
       this.noAccessories.set(existing.length === 0);
     } catch {
@@ -234,17 +229,13 @@ export class EquipmentFormPage implements OnInit {
     const id = this.equipmentId();
 
     try {
-      // `as unknown as ...` — stopgap até api#98 (API PR2) mergear: o schema gerado ainda
-      // descreve `accessories` como o texto livre antigo (ver comentário no tipo EquipmentInput
-      // acima). Runtime já manda o formato novo, só o tipo estático que ainda não sabe disso.
-      const apiInput = input as unknown as components['schemas']['EquipmentInput'];
       const saved = id
-        ? await this.store.update(this.clientId, id, apiInput)
-        : await this.store.create(this.clientId, apiInput);
+        ? await this.store.update(this.clientId, id, input)
+        : await this.store.create(this.clientId, input);
 
       // Acessórios novos (sem accessory_id antes de salvar) voltam com o id definitivo na
       // resposta — entram no catálogo local pra reaproveitar na mesma sessão sem recarregar.
-      const savedAccessories = Array.isArray(saved.accessories) ? (saved.accessories as SelectedAccessory[]) : [];
+      const savedAccessories = (saved.accessories ?? []) as SelectedAccessory[];
       this.accessoriesStore.upsertFromEquipment(
         savedAccessories
           .filter((item): item is SelectedAccessory & { accessory_id: string } => !!item.accessory_id)
