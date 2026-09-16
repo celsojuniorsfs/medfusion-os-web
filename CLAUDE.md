@@ -161,3 +161,26 @@ está abaixo do breakpoint — uma media query CSS não consegue condicionar a p
 `inert` do jeito que condiciona uma classe. Use `BreakpointObserver`
 (`@angular/cdk/layout`, já uma dependência do projeto) + `toSignal()`, não tente resolver
 isso só com Tailwind. Ver `core/layout/shell.component.ts`.
+
+## Toast atrás do diálogo de confirmação: feche o diálogo antes do `toast.error()`
+
+Achado ao investigar "mensagem de erro ficando no fundo" (print do usuário mostrando o toast
+esmaecido atrás do backdrop do `ConfirmDialogComponent`): quando um `catch` de
+`confirmRemove()` chamava `toast.error(...)` sem fechar o diálogo primeiro, o toast ficava
+**permanentemente** escondido atrás do backdrop — não é só questão de aumentar `z-index`.
+
+Causa raiz, confirmada em runtime via `elementFromPoint`/`elementsFromPoint`: o
+`BrnAlertDialog` (Angular CDK `Dialog`) renderiza seu overlay com `popover="manual"` — a
+Popover API nativa do navegador, que promove o elemento pro **top layer**, uma camada de
+composição inteiramente separada da árvore normal de stacking contexts. Nenhum `z-index`,
+por maior que seja (testado até `2147483647`), consegue fazer um elemento fora do top layer
+(como o `<ol data-sonner-toaster>`, que só tem um `z-index: 999999999` "normal") aparecer por
+cima de um elemento que está nele. Ver `shared/ui/confirm-dialog.component.ts` (usa
+`BrnAlertDialogImports`, que por baixo usa `@angular/cdk/dialog`).
+
+A saída não é brigar com o top layer — é nunca deixar o diálogo aberto no momento em que o
+toast aparece. Nos três lugares que têm esse padrão (`catalog.page.ts`,
+`clients.page.ts`, `equipments.page.ts`, todos em `confirmRemove()`), o `catch` agora chama
+`this.removeDialog().close()` **antes** do `toast.error(...)`, do mesmo jeito que o caminho de
+sucesso já fazia. Qualquer novo fluxo que misture `ConfirmDialogComponent` com um toast de
+erro precisa do mesmo cuidado.
