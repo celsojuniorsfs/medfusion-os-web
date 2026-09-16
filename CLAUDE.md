@@ -128,6 +128,31 @@ incompleta** — o builder novo do Angular 22 roda Vitest de forma zero-config, 
 próprio CLI. `npm test` já funciona assim; não crie um `vitest.config.ts` achando que está
 consertando algo.
 
+## "Fecha #N" em português NÃO fecha a issue
+
+O corpo das PRs aqui é escrito em português, e escrever "Fecha #92" **não fecha nada**: o
+GitHub só reconhece palavra-chave de fechamento em inglês (`close`/`closes`/`closed`,
+`fix`/`fixes`/`fixed`, `resolve`/`resolves`/`resolved`). Em português vira texto comum e a
+issue fica aberta para sempre, mesmo com a PR mergeada.
+
+Já aconteceu com #87, #92 e #93 (e no repo da API com #92, #101, #102) — todas entregues e
+esquecidas abertas, dando impressão de backlog pendente que não existe.
+
+Duas saídas, escolha uma e seja consistente: escrever `Closes #92` no corpo da PR (mistura
+idioma, mas fecha sozinho), ou manter o português e **fechar à mão depois do merge**, com
+um comentário dizendo qual PR entregou.
+
+## Testando um store que chama outro método do próprio store: cuidado com o microtask
+
+`EquipmentPhotosStore.upload()` faz `await` no POST e só então dispara o GET do reload.
+Num teste, `flush()` resolve o observable mas a continuação do `await` roda no **próximo
+microtask** — então um `httpMock.expectOne(...)` chamado logo depois do `flush` não acha o
+GET e falha com "found none". Basta um `await Promise.resolve()` entre os dois.
+
+O sintoma engana: parece que o método encadeado não foi chamado. Antes de reescrever o
+store (foi o que quase fiz, culpando o `this` dentro de `withMethods` — que funciona
+normalmente), cheque se é só ordem de execução no teste.
+
 ## `inert` é uma propriedade do DOM, não algo que CSS alterna
 
 Pra desabilitar o drawer de navegação (mobile) quando fechado sem afetar o desktop (onde
