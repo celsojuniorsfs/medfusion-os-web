@@ -1,0 +1,287 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <h1 class="text-xl font-semibold">Equipamentos</h1>
+    <p class="text-sm text-muted-foreground">
+      Catálogo global de modelos e acessórios — reaproveitado por qualquer cliente. Corrigir ou remover uma
+      entrada aqui reflete em todo cadastro de equipamento que a usa.
+    </p>
+  </div>
+
+  <div class="flex gap-1 border-b border-border">
+    <button
+      type="button"
+      (click)="activeTab.set('modelos')"
+      [attr.aria-selected]="activeTab() === 'modelos'"
+      class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"
+      [class.border-primary]="activeTab() === 'modelos'"
+      [class.text-foreground]="activeTab() === 'modelos'"
+      [class.border-transparent]="activeTab() !== 'modelos'"
+      [class.text-muted-foreground]="activeTab() !== 'modelos'"
+    >
+      Modelos
+    </button>
+    <button
+      type="button"
+      (click)="activeTab.set('acessorios')"
+      [attr.aria-selected]="activeTab() === 'acessorios'"
+      class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"
+      [class.border-primary]="activeTab() === 'acessorios'"
+      [class.text-foreground]="activeTab() === 'acessorios'"
+      [class.border-transparent]="activeTab() !== 'acessorios'"
+      [class.text-muted-foreground]="activeTab() !== 'acessorios'"
+    >
+      Acessórios
+    </button>
+  </div>
+
+  @if (pageError()) {
+    <ui-card><p class="p-6 text-sm text-destructive">{{ pageError() }}</p></ui-card>
+  } @else if (activeTab() === 'modelos') {
+    <ui-card class="p-4 md:p-6">
+      <!-- (submit) nativo + preventDefault, não (ngSubmit): este form não usa
+           FormsModule/ReactiveFormsModule (os campos são signals, sem [(ngModel)] nem
+           [formGroup]), e (ngSubmit) só existe de verdade quando uma dessas diretivas está
+           presente no <form> — sem ela, "(ngSubmit)" não escuta nada e o navegador manda um GET
+           nativo de verdade (achado clicando em "Adicionar" e vendo a tela ficar em branco). -->
+      <form class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end" (submit)="$event.preventDefault(); createModel()">
+        <div class="flex flex-col gap-1.5">
+          <label for="new-model-name" class="text-sm font-medium">Equipamento</label>
+          <input
+            id="new-model-name"
+            [value]="newModelName()"
+            (input)="newModelName.set($any($event.target).value)"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="new-model-brand" class="text-sm font-medium">Marca</label>
+          <input
+            id="new-model-brand"
+            [value]="newModelBrand()"
+            (input)="newModelBrand.set($any($event.target).value)"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="new-model-model" class="text-sm font-medium">Modelo</label>
+          <input
+            id="new-model-model"
+            [value]="newModelModel()"
+            (input)="newModelModel.set($any($event.target).value)"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <button
+          type="submit"
+          [disabled]="creatingModel()"
+          class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        >
+          @if (creatingModel()) {
+            <ui-spinner />
+          } @else {
+            <svg lucidePlus [size]="16"></svg>
+          }
+          Adicionar
+        </button>
+      </form>
+      @if (createModelError(); as message) {
+        <p class="mt-2 text-xs text-destructive">{{ message }}</p>
+      }
+    </ui-card>
+
+    @if (equipmentModelsStore.loading()) {
+      <ui-card>
+        <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground"><ui-spinner /> Carregando...</div>
+      </ui-card>
+    } @else if (equipmentModelsStore.entities().length === 0) {
+      <ui-card><p class="p-6 text-sm text-muted-foreground">Nenhum modelo cadastrado ainda.</p></ui-card>
+    } @else {
+      <ui-card>
+        <ul class="divide-y divide-border">
+          @for (model of equipmentModelsStore.entities(); track model.id) {
+            <li class="p-4">
+              @if (editingModelId() === model.id) {
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_auto_auto] sm:items-end">
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-xs text-muted-foreground">Equipamento</label>
+                    <input
+                      [value]="editModelName()"
+                      (input)="editModelName.set($any($event.target).value)"
+                      class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-xs text-muted-foreground">Marca</label>
+                    <input
+                      [value]="editModelBrand()"
+                      (input)="editModelBrand.set($any($event.target).value)"
+                      class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-xs text-muted-foreground">Modelo</label>
+                    <input
+                      [value]="editModelModel()"
+                      (input)="editModelModel.set($any($event.target).value)"
+                      class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    (click)="saveModel(model.id)"
+                    [disabled]="savingModelId() === model.id"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    @if (savingModelId() === model.id) {
+                      <ui-spinner />
+                    }
+                    Salvar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="cancelEditingModel()"
+                    class="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium hover:bg-accent"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              } @else {
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm">{{ equipmentModelLabel(model) }}</span>
+                  <div class="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      (click)="startEditingModel(model)"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      aria-label="Editar"
+                      title="Editar"
+                    >
+                      <svg lucidePencil [size]="16"></svg>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="requestRemoveModel(model)"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                      aria-label="Remover"
+                      title="Remover"
+                    >
+                      <svg lucideTrash [size]="16"></svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </ui-card>
+    }
+  } @else {
+    <ui-card class="p-4 md:p-6">
+      <form class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end" (submit)="$event.preventDefault(); createAccessory()">
+        <div class="flex flex-col gap-1.5">
+          <label for="new-accessory-name" class="text-sm font-medium">Acessório</label>
+          <input
+            id="new-accessory-name"
+            [value]="newAccessoryName()"
+            (input)="newAccessoryName.set($any($event.target).value)"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <button
+          type="submit"
+          [disabled]="creatingAccessory()"
+          class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        >
+          @if (creatingAccessory()) {
+            <ui-spinner />
+          } @else {
+            <svg lucidePlus [size]="16"></svg>
+          }
+          Adicionar
+        </button>
+      </form>
+      @if (createAccessoryError(); as message) {
+        <p class="mt-2 text-xs text-destructive">{{ message }}</p>
+      }
+    </ui-card>
+
+    @if (accessoriesStore.loading()) {
+      <ui-card>
+        <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground"><ui-spinner /> Carregando...</div>
+      </ui-card>
+    } @else if (accessoriesStore.entities().length === 0) {
+      <ui-card><p class="p-6 text-sm text-muted-foreground">Nenhum acessório cadastrado ainda.</p></ui-card>
+    } @else {
+      <ui-card>
+        <ul class="divide-y divide-border">
+          @for (accessory of accessoriesStore.entities(); track accessory.id) {
+            <li class="p-4">
+              @if (editingAccessoryId() === accessory.id) {
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                  <div class="flex flex-col gap-1.5">
+                    <label class="text-xs text-muted-foreground">Acessório</label>
+                    <input
+                      [value]="editAccessoryName()"
+                      (input)="editAccessoryName.set($any($event.target).value)"
+                      class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    (click)="saveAccessory(accessory.id)"
+                    [disabled]="savingAccessoryId() === accessory.id"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    @if (savingAccessoryId() === accessory.id) {
+                      <ui-spinner />
+                    }
+                    Salvar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="cancelEditingAccessory()"
+                    class="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium hover:bg-accent"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              } @else {
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm">{{ accessory.name }}</span>
+                  <div class="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      (click)="startEditingAccessory(accessory)"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      aria-label="Editar"
+                      title="Editar"
+                    >
+                      <svg lucidePencil [size]="16"></svg>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="requestRemoveAccessory(accessory)"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                      aria-label="Remover"
+                      title="Remover"
+                    >
+                      <svg lucideTrash [size]="16"></svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </ui-card>
+    }
+  }
+
+  <ui-confirm-dialog
+    title="Remover {{ pendingRemoval()?.kind === 'modelos' ? 'modelo' : 'acessório' }}"
+    [description]="pendingRemoval() ? 'Remover \'' + pendingRemoval()!.label + '\'? Essa ação não pode ser desfeita.' : ''"
+    confirmLabel="Remover"
+    [pending]="removing()"
+    (confirmed)="confirmRemove()"
+  />
+</div>

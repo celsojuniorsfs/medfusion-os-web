@@ -6,10 +6,10 @@ import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
-import { Accessory, accessoryMatchesSearch } from '../data-access/accessories';
-import { AccessoriesStore } from '../data-access/accessories.store';
-import { EquipmentModel, equipmentModelLabel, equipmentModelMatchesSearch } from '../data-access/equipment-models';
-import { EquipmentModelsStore } from '../data-access/equipment-models.store';
+import { Accessory, accessoryMatchesSearch } from '../../catalog/data-access/accessories';
+import { AccessoriesStore } from '../../catalog/data-access/accessories.store';
+import { EquipmentModel, equipmentModelLabel, equipmentModelMatchesSearch } from '../../catalog/data-access/equipment-models';
+import { EquipmentModelsStore } from '../../catalog/data-access/equipment-models.store';
 import { EquipmentPhotosStore } from '../data-access/equipment-photos.store';
 import { EquipmentsStore } from '../data-access/equipments.store';
 
@@ -29,8 +29,8 @@ interface SelectedAccessory {
 
 /**
  * Uma tela só pra criar e editar, mesmo padrão de client-form.page. Sem toTitleCase em nenhum
- * campo — nome/marca/modelo/N-S de equipamento costumam ser códigos alfanuméricos (ex.: um N/S
- * "AB12cd") onde recapitalizar destruiria o valor.
+ * campo — N/S de equipamento costuma ser código alfanumérico (ex.: "AB12cd") onde recapitalizar
+ * destruiria o valor.
  *
  * Não há GET de um equipamento isolado na API (só index/store/update/destroy, ver openapi.yaml) —
  * carrega a lista inteira do cliente e procura o equipamento nela, o que também é exatamente o que
@@ -64,16 +64,16 @@ export class EquipmentFormPage implements OnInit {
   // devolve o id (ver submit()). Ao editar, sobem na hora.
   protected readonly pendingPhotos = signal<File[]>([]);
 
-  // Modelo do equipamento (api#101/web#92): o catálogo global de modelos, reaproveitável entre
-  // clientes. Escolher um modelo preenche nome/marca/modelo de uma vez — o pedido do cliente era
-  // parar de redigitar isso a cada aparelho. Fora do form reativo, mesmo raciocínio dos acessórios.
-  //
-  // `null` aqui não quer dizer "sem modelo": quer dizer que o técnico está digitando à mão em vez
-  // de escolher do catálogo. A API resolve pelo trio nome/marca/modelo e cadastra a entrada nova se
-  // precisar (ver EquipmentController::resolveEquipmentModel) — ou seja, todo equipamento acaba
-  // ligado ao catálogo de um jeito ou de outro.
+  // Modelo do equipamento (api#101/#109/#112): o catálogo global de modelos, reaproveitável entre
+  // clientes. Desde o api#112 a seleção é a ÚNICA forma de vincular um equipamento a um modelo —
+  // não existe mais campo de texto pra nome/marca/modelo aqui, nem cadastro implícito ao salvar
+  // (fechava a causa-raiz da issue #110). Cadastrar um modelo novo agora só acontece na tela
+  // /equipamentos; o link abaixo leva pra lá sem perder o texto já digitado na busca.
   protected readonly equipmentModelId = signal<string | null>(null);
   protected readonly equipmentModelSearch = signal('');
+  // Mesmo raciocínio de accessoriesTouched: só considera inválido depois que o técnico tentou
+  // salvar, senão a mensagem apareceria já na primeira renderização da tela de edição.
+  protected readonly equipmentModelTouched = signal(false);
 
   protected readonly filteredEquipmentModels = computed(() =>
     this.equipmentModelsStore
@@ -87,6 +87,14 @@ export class EquipmentFormPage implements OnInit {
   });
 
   protected readonly equipmentModelLabel = equipmentModelLabel;
+  protected readonly equipmentModelValid = computed(() => this.equipmentModelId() !== null);
+
+  // Preenchido só ao editar um equipamento cadastrado antes do api#112, sem vínculo com o
+  // catálogo (o backfill do api#101 não achou correspondência pra ele) — mostra o que já estava
+  // salvo enquanto o técnico escolhe um modelo pra migrar o cadastro, exigido pela API no PUT.
+  protected readonly legacyEquipmentSnapshot = signal<{ name: string; brand: string | null; model: string | null } | null>(
+    null,
+  );
 
   // Acessórios (api#92/web#87): campo de texto único vira uma lista, ligada ao catálogo global
   // reaproveitável entre equipamentos — ver accessories.store.ts. Fora do form reativo de
@@ -111,12 +119,6 @@ export class EquipmentFormPage implements OnInit {
   protected readonly accessoriesValid = computed(() => this.noAccessories() || this.selectedAccessories().length > 0);
 
   protected readonly form = this.fb.nonNullable.group({
-    name: ['', Validators.required],
-    // Obrigatórios desde api#92/web#87 — antes eram livres. Achado da issue: o técnico às vezes
-    // coloca uma marca (ex.: "Sonopus") no campo de equipamento por falta de organização; marca
-    // e modelo obrigatórios ajudam a manter o cadastro consistente.
-    brand: ['', Validators.required],
-    model: ['', Validators.required],
     serial_number: [''],
     asset_tag: [''],
   });
@@ -148,14 +150,18 @@ export class EquipmentFormPage implements OnInit {
       }
 
       this.form.patchValue({
-        name: equipment.name ?? '',
-        brand: equipment.brand ?? '',
-        model: equipment.model ?? '',
         serial_number: equipment.serial_number ?? '',
         asset_tag: equipment.asset_tag ?? '',
       });
 
       this.equipmentModelId.set(equipment.equipment_model_id ?? null);
+      if (!equipment.equipment_model_id) {
+        this.legacyEquipmentSnapshot.set({
+          name: equipment.name ?? '',
+          brand: equipment.brand ?? null,
+          model: equipment.model ?? null,
+        });
+      }
 
       const existing = (equipment.accessories ?? []) as SelectedAccessory[];
       this.selectedAccessories.set(existing.map((item) => ({ ...item })));
@@ -210,27 +216,12 @@ export class EquipmentFormPage implements OnInit {
     this.equipmentModelSearch.set(value);
   }
 
-  /** Escolher um modelo do catálogo preenche os três campos de uma vez — o ganho que o cliente pediu. */
   selectEquipmentModel(equipmentModel: EquipmentModel): void {
+    this.equipmentModelTouched.set(true);
     this.equipmentModelId.set(equipmentModel.id);
-    this.form.patchValue({
-      name: equipmentModel.name,
-      brand: equipmentModel.brand ?? '',
-      model: equipmentModel.model ?? '',
-    });
     this.equipmentModelSearch.set('');
-  }
-
-  /**
-   * Chamado quando o técnico digita à mão em nome/marca/modelo: solta o vínculo com a entrada do
-   * catálogo, senão o equipment_model_id enviado contradiria o texto que está na tela. A API
-   * reresolve pelo trio e cadastra a entrada nova se precisar.
-   *
-   * Só dispara em digitação de verdade — `patchValue` (que é como selectEquipmentModel preenche os
-   * campos) não emite evento de `input` no DOM, então não há risco de ele se desfazer sozinho.
-   */
-  onModelFieldTyped(): void {
-    this.equipmentModelId.set(null);
+    // A partir daqui o cadastro deixou de ser "legado" — some o aviso de migração, se houver.
+    this.legacyEquipmentSnapshot.set(null);
   }
 
   onNoAccessoriesChange(checked: boolean): void {
@@ -316,12 +307,13 @@ export class EquipmentFormPage implements OnInit {
   async submit(): Promise<void> {
     if (this.loading()) return;
 
-    // Mesmo achado do web#86 em client-form.page: sem isso, clicar em Salvar com marca/modelo
-    // nunca tocados não mostra nenhuma mensagem de erro — os spans só aparecem com `.touched`,
-    // e o clique no botão em si não marca nada como touched. accessoriesTouched acompanha o
-    // mesmo raciocínio pro seletor, que fica fora do form reativo.
+    // Mesmo achado do web#86 em client-form.page: sem isso, clicar em Salvar sem o form ter sido
+    // tocado não mostra nenhuma mensagem de erro — os spans só aparecem com `.touched`, e o
+    // clique no botão em si não marca nada como touched. equipmentModelTouched/accessoriesTouched
+    // acompanham o mesmo raciocínio pros dois seletores, que ficam fora do form reativo.
+    this.equipmentModelTouched.set(true);
     this.accessoriesTouched.set(true);
-    if (this.form.invalid || !this.accessoriesValid()) {
+    if (this.form.invalid || !this.equipmentModelValid() || !this.accessoriesValid()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -331,7 +323,8 @@ export class EquipmentFormPage implements OnInit {
 
     const input: EquipmentInput = {
       ...this.form.getRawValue(),
-      equipment_model_id: this.equipmentModelId(),
+      // equipmentModelValid() já garantiu que não é null.
+      equipment_model_id: this.equipmentModelId()!,
       no_accessories: this.noAccessories(),
       accessories: this.noAccessories() ? [] : this.selectedAccessories(),
     };
@@ -344,19 +337,6 @@ export class EquipmentFormPage implements OnInit {
 
       // Acessórios novos (sem accessory_id antes de salvar) voltam com o id definitivo na
       // resposta — entram no catálogo local pra reaproveitar na mesma sessão sem recarregar.
-      // O modelo resolvido pela API (existente ou cadastrado na hora) entra no catálogo local, pra
-      // reaproveitar no próximo cadastro da mesma sessão sem recarregar tudo.
-      if (saved.equipment_model_id) {
-        this.equipmentModelsStore.upsertFromEquipment([
-          {
-            id: saved.equipment_model_id,
-            name: saved.name ?? '',
-            brand: saved.brand ?? null,
-            model: saved.model ?? null,
-          },
-        ]);
-      }
-
       const savedAccessories = (saved.accessories ?? []) as SelectedAccessory[];
       this.accessoriesStore.upsertFromEquipment(
         savedAccessories
@@ -383,9 +363,16 @@ export class EquipmentFormPage implements OnInit {
       await this.router.navigate(['/clients', this.clientId, 'equipamentos']);
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 422) {
-        for (const field of Object.keys(error.error?.errors ?? {})) {
+        const errors = error.error?.errors ?? {};
+        for (const field of Object.keys(errors)) {
           this.form.get(field)?.setErrors({ server: true });
           this.form.get(field)?.markAsTouched();
+        }
+        // equipment_model_id não é um FormControl (o seletor fica fora do form reativo) — o caso
+        // realista é o modelo escolhido ter sido removido do catálogo entre o carregamento da
+        // tela e o envio; solta a seleção pra forçar escolher de novo.
+        if (errors['equipment_model_id']) {
+          this.equipmentModelId.set(null);
         }
         this.errorMessage.set('Confira os campos destacados.');
       } else {

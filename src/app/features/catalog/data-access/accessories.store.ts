@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { effect, inject } from '@angular/core';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
-import { removeAllEntities, setAllEntities, upsertEntities, withEntities } from '@ngrx/signals/entities';
+import { removeAllEntities, removeEntity, setAllEntities, upsertEntities, withEntities } from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthSessionStore } from '../../../core/auth/auth-session.store';
@@ -13,14 +13,18 @@ interface AccessoriesState {
 }
 
 /**
- * Catálogo GLOBAL de acessórios (api#92) — ao contrário de EquipmentsStore (por cliente), aqui
- * não tem clientId: GET /accessories devolve o catálogo inteiro, compartilhado entre todos os
- * clientes (mesmo raciocínio "peça de carro que se repete entre equipamentos" da issue). Sem
- * create(): um acessório novo digitado no seletor do formulário de equipamento não passa por
- * aqui — vai junto no payload do equipamento (POST/PUT /clients/{id}/equipments) como
- * `{ name, quantity }`, e a API resolve/cadastra no catálogo. `upsertFromEquipment()` injeta o
- * resultado aqui depois (accessory_id definitivo, inclusive dos que já existiam), reaproveitável
- * na mesma sessão sem precisar recarregar o catálogo inteiro.
+ * Catálogo GLOBAL de acessórios (api#92/#111) — ao contrário de EquipmentsStore (por cliente),
+ * aqui não tem clientId: GET /accessories devolve o catálogo inteiro, compartilhado entre todos
+ * os clientes (mesmo raciocínio "peça de carro que se repete entre equipamentos" da issue).
+ *
+ * Ao contrário do catálogo de modelos (api#112), o formulário de equipamento continua podendo
+ * cadastrar um acessório novo digitando o nome — `upsertFromEquipment()` injeta o resultado aqui
+ * depois (accessory_id definitivo, inclusive dos que já existiam), reaproveitável na mesma sessão
+ * sem precisar recarregar o catálogo inteiro.
+ *
+ * `update()`/`remove()` são a tela de manutenção do catálogo (a #109/#111) — não engolem erro,
+ * deixam propagar (mesmo padrão de `EquipmentsStore.remove()`), pra quem chama poder distinguir um
+ * 409 (acessório em uso) de qualquer outra falha e mostrar a mensagem certa.
  */
 export const AccessoriesStore = signalStore(
   { providedIn: 'root' },
@@ -40,6 +44,32 @@ export const AccessoriesStore = signalStore(
       } catch {
         patchState(store, { loading: false, error: 'Não foi possível carregar o catálogo de acessórios.' });
       }
+    },
+
+    async create(name: string): Promise<Accessory> {
+      const response = await firstValueFrom(
+        http.post<{ data: Accessory }>(`${environment.apiUrl}/accessories`, { name }),
+      );
+
+      patchState(store, upsertEntities([response.data]));
+
+      return response.data;
+    },
+
+    async update(id: string, name: string): Promise<Accessory> {
+      const response = await firstValueFrom(
+        http.put<{ data: Accessory }>(`${environment.apiUrl}/accessories/${id}`, { name }),
+      );
+
+      patchState(store, upsertEntities([response.data]));
+
+      return response.data;
+    },
+
+    async remove(id: string): Promise<void> {
+      await firstValueFrom(http.delete<void>(`${environment.apiUrl}/accessories/${id}`));
+
+      patchState(store, removeEntity(id));
     },
 
     /**
