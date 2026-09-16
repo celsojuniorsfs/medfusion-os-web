@@ -15,13 +15,25 @@
     <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="equipment-model-search" class="text-sm font-medium">Modelo cadastrado</label>
+          <label for="equipment-model-search" class="text-sm font-medium">Modelo</label>
           @if (selectedEquipmentModel(); as selected) {
             <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
               <span class="flex-1 text-sm">{{ equipmentModelLabel(selected) }}</span>
-              <span class="text-xs text-muted-foreground">do catálogo</span>
+              <button
+                type="button"
+                (click)="equipmentModelId.set(null)"
+                class="text-xs text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Trocar
+              </button>
             </div>
           } @else {
+            @if (legacyEquipmentSnapshot(); as legacy) {
+              <p class="text-xs text-muted-foreground">
+                Cadastro antigo: {{ legacy.name }} / {{ legacy.brand ?? '—' }} / {{ legacy.model ?? '—' }} —
+                selecione um modelo do catálogo pra continuar.
+              </p>
+            }
             <div class="relative">
               <input
                 id="equipment-model-search"
@@ -29,7 +41,8 @@
                 placeholder="Buscar um modelo já cadastrado (ex.: ultrassom, Sonopus)..."
                 [value]="equipmentModelSearch()"
                 (input)="onEquipmentModelSearchInput($any($event.target).value)"
-                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                [attr.aria-invalid]="equipmentModelTouched() && !equipmentModelValid() ? true : null"
+                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
               />
               @if (equipmentModelSearch().trim()) {
                 <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
@@ -43,64 +56,23 @@
                     </button>
                   } @empty {
                     <p class="px-3 py-2 text-sm text-muted-foreground">
-                      Nenhum modelo encontrado — preencha os campos abaixo e ele entra no catálogo ao salvar.
+                      Nenhum modelo encontrado.
+                      <a
+                        [routerLink]="['/equipamentos']"
+                        [queryParams]="{ name: equipmentModelSearch().trim() }"
+                        class="text-primary hover:underline"
+                      >
+                        Cadastre um modelo novo
+                      </a>
+                      e volte pra selecionar.
                     </p>
                   }
                 </div>
               }
             </div>
           }
-          <span class="text-xs text-muted-foreground">
-            Escolher um modelo preenche equipamento, marca e modelo. Digitando neles à mão, o modelo entra no
-            catálogo ao salvar.
-          </span>
-        </div>
-
-        <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="name" class="text-sm font-medium">Equipamento</label>
-          <input
-            id="name"
-            formControlName="name"
-            (input)="onModelFieldTyped()"
-            [attr.aria-invalid]="form.controls.name.invalid && form.controls.name.touched ? true : null"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
-          />
-          @if (form.controls.name.hasError('required') && form.controls.name.touched) {
-            <span class="text-xs text-destructive">Informe o equipamento</span>
-          } @else if (serverErrorMessage('name'); as message) {
-            <span class="text-xs text-destructive">{{ message }}</span>
-          }
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label for="brand" class="text-sm font-medium">Marca</label>
-          <input
-            id="brand"
-            formControlName="brand"
-            (input)="onModelFieldTyped()"
-            [attr.aria-invalid]="form.controls.brand.invalid && form.controls.brand.touched ? true : null"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
-          />
-          @if (form.controls.brand.hasError('required') && form.controls.brand.touched) {
-            <span class="text-xs text-destructive">Informe a marca</span>
-          } @else if (serverErrorMessage('brand'); as message) {
-            <span class="text-xs text-destructive">{{ message }}</span>
-          }
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label for="model" class="text-sm font-medium">Modelo</label>
-          <input
-            id="model"
-            formControlName="model"
-            (input)="onModelFieldTyped()"
-            [attr.aria-invalid]="form.controls.model.invalid && form.controls.model.touched ? true : null"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
-          />
-          @if (form.controls.model.hasError('required') && form.controls.model.touched) {
-            <span class="text-xs text-destructive">Informe o modelo</span>
-          } @else if (serverErrorMessage('model'); as message) {
-            <span class="text-xs text-destructive">{{ message }}</span>
+          @if (equipmentModelTouched() && !equipmentModelValid()) {
+            <span class="text-xs text-destructive">Selecione um modelo do catálogo</span>
           }
         </div>
 
