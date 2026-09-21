@@ -4,6 +4,7 @@ import {
   LucideChevronDown,
   LucidePencil,
   LucidePlus,
+  LucideQrCode,
   LucideSearch,
   LucideTrash,
 } from '@lucide/angular';
@@ -33,6 +34,7 @@ import { EquipmentsStore } from '../data-access/equipments.store';
     LucidePencil,
     LucideTrash,
     LucideChevronDown,
+    LucideQrCode,
   ],
   templateUrl: './equipments.page.html',
 })
