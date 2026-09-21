@@ -1,0 +1,210 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <a routerLink="/orders" class="text-sm text-muted-foreground hover:text-foreground">&larr; Voltar</a>
+    <h1 class="mt-1 text-xl font-semibold">Nova Ordem de Serviço</h1>
+  </div>
+
+  <ui-card class="max-w-2xl p-4 md:p-6">
+    @if (initialLoading()) {
+      <div class="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
+        <ui-spinner /> Carregando...
+      </div>
+    } @else {
+    <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="flex flex-col gap-1.5">
+          <label for="number" class="text-sm font-medium">Número</label>
+          <input
+            id="number"
+            type="number"
+            formControlName="number"
+            [attr.aria-invalid]="form.controls.number.invalid && form.controls.number.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+          />
+          @if (serverErrorMessage('number'); as message) {
+            <span class="text-xs text-destructive">{{ message }}</span>
+          } @else {
+            <span class="text-xs text-muted-foreground">Sugerido automaticamente — pode ajustar se precisar.</span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="date" class="text-sm font-medium">Data</label>
+          <input
+            id="date"
+            type="date"
+            formControlName="date"
+            [attr.aria-invalid]="form.controls.date.invalid && form.controls.date.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+          <label for="client-search" class="text-sm font-medium">Cliente</label>
+          @if (selectedClient(); as client) {
+            <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
+              <span class="flex-1 text-sm">{{ client.name }}</span>
+              <button
+                type="button"
+                (click)="changeClient()"
+                class="text-xs text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Trocar
+              </button>
+            </div>
+          } @else {
+            <div class="relative">
+              <input
+                id="client-search"
+                type="text"
+                placeholder="Buscar cliente por nome ou CPF/CNPJ..."
+                [value]="clientSearch()"
+                (input)="onClientSearchInput($any($event.target).value)"
+                [attr.aria-invalid]="clientTouched() && !clientValid() ? true : null"
+                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+              />
+              @if (clientSearch().trim()) {
+                <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+                  @for (client of clientsStore.entities(); track client.id) {
+                    <button
+                      type="button"
+                      (click)="selectClient(client)"
+                      class="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                    >
+                      {{ client.name }}
+                    </button>
+                  } @empty {
+                    <p class="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado.</p>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if (clientTouched() && !clientValid()) {
+            <span class="text-xs text-destructive">Selecione um cliente</span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+          <label for="equipment-search" class="text-sm font-medium">Equipamento</label>
+          @if (!clientValid()) {
+            <p class="text-xs text-muted-foreground">Selecione um cliente para escolher o equipamento.</p>
+          } @else if (selectedEquipment(); as equipment) {
+            <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
+              <span class="flex-1 text-sm">{{ equipment.name }} · {{ equipment.brand }} · {{ equipment.model }}</span>
+              <button
+                type="button"
+                (click)="equipmentId.set(null)"
+                class="text-xs text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Trocar
+              </button>
+            </div>
+          } @else {
+            <div class="relative">
+              <input
+                id="equipment-search"
+                type="text"
+                placeholder="Buscar equipamento cadastrado deste cliente..."
+                [value]="equipmentSearch()"
+                (input)="onEquipmentSearchInput($any($event.target).value)"
+                [attr.aria-invalid]="equipmentTouched() && !equipmentValid() ? true : null"
+                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+              />
+              @if (loadingEquipments()) {
+                <p class="mt-1 text-xs text-muted-foreground">Carregando equipamentos...</p>
+              } @else {
+                <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+                  @for (equipment of filteredEquipments(); track equipment.id) {
+                    <button
+                      type="button"
+                      (click)="selectEquipment(equipment)"
+                      class="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                    >
+                      {{ equipment.name }} · {{ equipment.brand }} · {{ equipment.model }}
+                      @if (equipment.serial_number) {
+                        <span class="text-muted-foreground">(N/S {{ equipment.serial_number }})</span>
+                      }
+                    </button>
+                  } @empty {
+                    <p class="px-3 py-2 text-sm text-muted-foreground">
+                      Nenhum equipamento cadastrado para este cliente ainda.
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if (equipmentTouched() && !equipmentValid()) {
+            <span class="text-xs text-destructive">Selecione um equipamento</span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+          <label for="reported_defect" class="text-sm font-medium">Defeito relatado</label>
+          <textarea
+            id="reported_defect"
+            formControlName="reported_defect"
+            rows="3"
+            class="w-full rounded-md border border-input bg-input-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+          <label for="accessories" class="text-sm font-medium">Acessórios</label>
+          <input
+            id="accessories"
+            type="text"
+            formControlName="accessories"
+            maxlength="255"
+            placeholder="Ex.: cabo de força, pedal"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="labor_cost" class="text-sm font-medium">Mão de obra (R$)</label>
+          <input
+            id="labor_cost"
+            type="number"
+            step="0.01"
+            formControlName="labor_cost"
+            [attr.aria-invalid]="form.controls.labor_cost.invalid && form.controls.labor_cost.touched ? true : null"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+          />
+          <!-- Texto de ajuda fixo: nesta v1 não existe UI de itens/peças, então mão de obra é o
+               único jeito de satisfazer a regra da API ("precisa ter mão de obra ou algum item
+               com preço") — sem isso, um 422 nesse campo confundiria quem estiver preenchendo. -->
+          <span class="text-xs text-muted-foreground">
+            Obrigatório nesta versão — o lançamento de peças chega depois.
+          </span>
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <p class="text-sm text-destructive">{{ errorMessage() }}</p>
+      }
+
+      <div class="flex gap-2">
+        <button
+          type="submit"
+          [disabled]="loading()"
+          class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        >
+          @if (loading()) {
+            <ui-spinner /> Salvando...
+          } @else {
+            Salvar
+          }
+        </button>
+        <a
+          routerLink="/orders"
+          class="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium hover:bg-accent"
+        >
+          Cancelar
+        </a>
+      </div>
+    </form>
+    }
+  </ui-card>
+</div>
