@@ -36,8 +36,8 @@ describe('authGuard', () => {
     localStorage.clear();
   });
 
-  function runGuard() {
-    return runInInjectionContext(injector, () => authGuard({} as never, {} as never));
+  function runGuard(url = '/qualquer/lugar') {
+    return runInInjectionContext(injector, () => authGuard({} as never, { url } as never));
   }
 
   it('allows activation when already authenticated', async () => {
@@ -60,6 +60,17 @@ describe('authGuard', () => {
 
     expect(result).toBeInstanceOf(UrlTree);
     httpMock.expectNone(`${environment.apiUrl}/auth/me`);
+  });
+
+  /**
+   * web#101: um link de QR Code escaneado sem sessão ativa precisa lembrar pra onde a pessoa ia
+   * e voltar pra lá depois do login, em vez de sempre cair na tela padrão.
+   */
+  it('preserves the originally intended URL as returnUrl when redirecting to /login', async () => {
+    const result = await runGuard('/orders/novo/equipamento/eq-1');
+
+    expect(result).toBeInstanceOf(UrlTree);
+    expect((result as UrlTree).queryParams).toEqual({ returnUrl: '/orders/novo/equipamento/eq-1' });
   });
 
   it('restores the session and allows activation when the saved token is still valid', async () => {

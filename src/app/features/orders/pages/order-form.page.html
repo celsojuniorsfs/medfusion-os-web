@@ -9,6 +9,14 @@
       <div class="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
         <ui-spinner /> Carregando...
       </div>
+    } @else if (qrEquipmentNotFound()) {
+      <div class="flex flex-col gap-3 p-2 text-sm">
+        <p>
+          Este QR Code aponta pra um equipamento que não está mais cadastrado — pode ser uma etiqueta antiga de um
+          equipamento removido.
+        </p>
+        <a routerLink="/orders/novo" class="w-fit text-primary hover:underline">Abrir uma OS manualmente</a>
+      </div>
     } @else {
     <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -44,13 +52,17 @@
           @if (selectedClient(); as client) {
             <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
               <span class="flex-1 text-sm">{{ client.name }}</span>
-              <button
-                type="button"
-                (click)="changeClient()"
-                class="text-xs text-muted-foreground hover:text-foreground hover:underline"
-              >
-                Trocar
-              </button>
+              @if (lockedByQr()) {
+                <span class="text-xs text-muted-foreground">Vindo do QR Code</span>
+              } @else {
+                <button
+                  type="button"
+                  (click)="changeClient()"
+                  class="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Trocar
+                </button>
+              }
             </div>
           } @else {
             <div class="relative">
@@ -92,13 +104,17 @@
           } @else if (selectedEquipment(); as equipment) {
             <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
               <span class="flex-1 text-sm">{{ equipment.name }} · {{ equipment.brand }} · {{ equipment.model }}</span>
-              <button
-                type="button"
-                (click)="equipmentId.set(null)"
-                class="text-xs text-muted-foreground hover:text-foreground hover:underline"
-              >
-                Trocar
-              </button>
+              @if (lockedByQr()) {
+                <span class="text-xs text-muted-foreground">Vindo do QR Code</span>
+              } @else {
+                <button
+                  type="button"
+                  (click)="equipmentId.set(null)"
+                  class="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Trocar
+                </button>
+              }
             </div>
           } @else {
             <div class="relative">
@@ -144,6 +160,7 @@
           <label for="reported_defect" class="text-sm font-medium">Defeito relatado</label>
           <textarea
             id="reported_defect"
+            #reportedDefectInput
             formControlName="reported_defect"
             rows="3"
             class="w-full rounded-md border border-input bg-input-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"

@@ -87,6 +87,31 @@ describe('EquipmentsStore', () => {
     expect(store.entities()).toHaveLength(0);
   });
 
+  it('findOne() fetches an equipment by id without depending on a client and adds it to entities', async () => {
+    const store = TestBed.inject(EquipmentsStore);
+
+    const promise = store.findOne('e1');
+    httpMock
+      .expectOne(`${environment.apiUrl}/equipments/e1`)
+      .flush({ data: anEquipment({ id: 'e1' }) });
+
+    const equipment = await promise;
+
+    expect(equipment.id).toBe('e1');
+    expect(store.entities().map((e) => e.id)).toContain('e1');
+  });
+
+  it('findOne() propagates a 404 instead of swallowing it', async () => {
+    const store = TestBed.inject(EquipmentsStore);
+
+    const promise = store.findOne('inexistente');
+    httpMock
+      .expectOne(`${environment.apiUrl}/equipments/inexistente`)
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+
+    await expect(promise).rejects.toMatchObject({ status: 404 });
+  });
+
   it('reset() clears entities and error/loading state', async () => {
     const store = TestBed.inject(EquipmentsStore);
 

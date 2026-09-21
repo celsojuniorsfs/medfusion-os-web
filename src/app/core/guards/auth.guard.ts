@@ -15,13 +15,18 @@ import { AuthSessionStore } from '../auth/auth-session.store';
  * próprio fica só pra quando não existe token nenhum pra tentar (o interceptor nunca chega a
  * rodar, porque nenhuma chamada HTTP acontece).
  */
-export const authGuard: CanActivateFn = async () => {
+export const authGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthSessionStore);
   const router = inject(Router);
 
   if (auth.isAuthenticated()) return true;
 
-  if (!auth.token()) return router.createUrlTree(['/login']);
+  // `returnUrl` guarda a URL que a pessoa realmente queria (ex.: um link de QR Code escaneado
+  // deslogada, web#101) pra LoginPage devolver pra lá depois de autenticar, em vez de sempre cair
+  // na tela padrão.
+  if (!auth.token()) {
+    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  }
 
   return await auth.restoreSession();
 };
