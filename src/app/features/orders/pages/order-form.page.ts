@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
@@ -12,7 +12,7 @@ import { OrdersStore } from '../data-access/orders.store';
 
 type OrderInput = components['schemas']['OrderInput'];
 type Client = components['schemas']['Client'] & { id: string };
-type Equipment = components['schemas']['Equipment'] & { id: string };
+type Equipment = components['schemas']['Equipment'] & { id: string; client_id: string };
 
 /**
  * Versão mínima da Nova OS (v1 do recurso de reconhecimento de equipamento por QR Code, ver
@@ -35,10 +35,18 @@ export class OrderFormPage implements OnInit, OnDestroy {
   protected readonly clientsStore = inject(ClientsStore);
   protected readonly equipmentsStore = inject(EquipmentsStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly initialLoading = signal(false);
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+
+  // Preenchimento via QR Code (web#101): cliente e equipamento chegam travados, sobrando só
+  // defeito/acessórios/mão de obra. `qrEquipmentNotFound` cobre a etiqueta antiga apontando pra um
+  // equipamento já removido do cadastro.
+  protected readonly lockedByQr = signal(false);
+  protected readonly qrEquipmentNotFound = signal(false);
+  private readonly reportedDefectInput = viewChild<ElementRef<HTMLTextAreaElement>>('reportedDefectInput');
 
   protected readonly clientSearch = signal('');
   protected readonly clientId = signal<string | null>(null);
@@ -86,16 +94,50 @@ export class OrderFormPage implements OnInit, OnDestroy {
     labor_cost: [null as number | null, [Validators.required, Validators.min(0.01)]],
   });
 
+  constructor() {
+    // Critério de pronto da web#101: ao entrar pelo QR Code, o cursor já cai no campo de defeito
+    // (cliente/equipamento já vêm resolvidos, então é o único campo que sobra preencher).
+    effect(() => {
+      if (!this.initialLoading() && this.lockedByQr()) {
+        this.reportedDefectInput()?.nativeElement.focus();
+      }
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     this.initialLoading.set(true);
 
+    const equipmentId = this.route.snapshot.paramMap.get('equipmentId');
+
     try {
-      const [number] = await Promise.all([this.store.nextNumber(), this.clientsStore.load()]);
+      const [number] = await Promise.all([
+        this.store.nextNumber(),
+        equipmentId ? this.loadFromQrEquipment(equipmentId) : this.clientsStore.load(),
+      ]);
       this.form.patchValue({ number });
     } catch {
       this.errorMessage.set('Não foi possível sugerir o número da OS — preencha manualmente.');
     } finally {
       this.initialLoading.set(false);
+    }
+  }
+
+  private async loadFromQrEquipment(equipmentId: string): Promise<void> {
+    try {
+      const equipment = await this.equipmentsStore.findOne(equipmentId);
+      const client = await this.clientsStore.findOne(equipment.client_id);
+
+      this.lockedByQr.set(true);
+      this.clientId.set(client.id);
+      this.clientTouched.set(true);
+      this.equipmentId.set(equipment.id);
+      this.equipmentTouched.set(true);
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        this.qrEquipmentNotFound.set(true);
+      } else {
+        this.errorMessage.set('Não foi possível carregar os dados do equipamento a partir do QR Code.');
+      }
     }
   }
 

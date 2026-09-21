@@ -14,7 +14,7 @@ import { environment } from '../../../../environments/environment';
 import { components } from '../../../core/api-types';
 import { AuthSessionStore } from '../../../core/auth/auth-session.store';
 
-type Equipment = components['schemas']['Equipment'] & { id: string };
+type Equipment = components['schemas']['Equipment'] & { id: string; client_id: string };
 type EquipmentInput = components['schemas']['EquipmentInput'];
 
 interface EquipmentsState {
@@ -77,6 +77,22 @@ export const EquipmentsStore = signalStore(
       await firstValueFrom(http.delete<void>(`${environment.apiUrl}/clients/${clientId}/equipments/${id}`));
 
       patchState(store, removeEntity(id));
+    },
+
+    /**
+     * Busca um equipamento só pelo id, sem saber o cliente antemão — GET /equipments/{id}
+     * (api#115), criado pro fluxo de reconhecimento por QR Code (web#101): quem chega aqui só tem
+     * o uuid lido da etiqueta. A resposta já traz `client_id`, usado pra resolver o cliente em
+     * seguida via `ClientsStore.findOne()`.
+     */
+    async findOne(id: string): Promise<Equipment> {
+      const response = await firstValueFrom(
+        http.get<{ data: Equipment }>(`${environment.apiUrl}/equipments/${id}`),
+      );
+
+      patchState(store, addEntity(response.data));
+
+      return response.data;
     },
 
     /**
