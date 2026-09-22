@@ -1,0 +1,28 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <a routerLink="/orders" class="text-sm text-muted-foreground hover:text-foreground">&larr; Voltar</a>
+    <h1 class="mt-1 text-xl font-semibold">Escanear equipamento</h1>
+    <p class="text-sm text-muted-foreground">Aponte a câmera pro QR Code colado no equipamento.</p>
+  </div>
+
+  <ui-card class="max-w-md p-4">
+    @if (cameraError()) {
+      <div class="flex flex-col gap-3 p-2 text-sm">
+        <p class="text-destructive">{{ cameraErrorMessage() }}</p>
+        <a routerLink="/orders/novo" class="w-fit text-primary hover:underline">Abrir uma OS manualmente</a>
+      </div>
+    } @else {
+      <div class="relative overflow-hidden rounded-md bg-black">
+        <video #video class="aspect-square w-full object-cover" muted playsinline></video>
+        @if (starting()) {
+          <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm text-white">
+            <ui-spinner /> Abrindo câmera...
+          </div>
+        }
+      </div>
+      <a routerLink="/orders/novo" class="mt-3 block w-fit text-sm text-primary hover:underline">
+        Prefere abrir a OS manualmente?
+      </a>
+    }
+  </ui-card>
+</div>
