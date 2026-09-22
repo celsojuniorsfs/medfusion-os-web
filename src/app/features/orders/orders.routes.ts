@@ -7,4 +7,5 @@ export const ORDERS_ROUTES: Routes = [
     path: 'novo/equipamento/:equipmentId',
     loadComponent: () => import('./pages/order-form.page').then((m) => m.OrderFormPage),
   },
+  { path: 'escanear', loadComponent: () => import('./pages/scan-equipment.page').then((m) => m.ScanEquipmentPage) },
 ];
