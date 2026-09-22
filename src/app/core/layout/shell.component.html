@@ -1,5 +1,7 @@
 <div class="min-h-dvh bg-muted/40">
-  <header class="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4">
+  <header
+    class="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4 print:hidden"
+  >
     <div class="flex items-center gap-2">
       <button
         #menuButton
@@ -54,7 +56,7 @@
     }
 
     <aside
-      class="fixed inset-y-0 left-0 z-40 w-64 shrink-0 -translate-x-full border-r border-border bg-card p-4 transition-transform duration-200 md:static md:translate-x-0"
+      class="fixed inset-y-0 left-0 z-40 w-64 shrink-0 -translate-x-full border-r border-border bg-card p-4 transition-transform duration-200 md:static md:translate-x-0 print:hidden"
       [class.translate-x-0]="sidebarOpen()"
       [inert]="sidebarInert()"
       (keydown.escape)="closeSidebar()"
@@ -83,7 +85,7 @@
       </nav>
     </aside>
 
-    <main class="min-w-0 flex-1 p-4 md:p-6">
+    <main class="min-w-0 flex-1 p-4 md:p-6 print:p-0">
       <router-outlet />
     </main>
   </div>

@@ -13,4 +13,8 @@ export const CLIENTS_ROUTES: Routes = [
     path: ':id/equipamentos/:equipmentId/editar',
     loadComponent: () => import('./pages/equipment-form.page').then((m) => m.EquipmentFormPage),
   },
+  {
+    path: ':id/equipamentos/:equipmentId/qrcode',
+    loadComponent: () => import('./pages/equipment-qr-code.page').then((m) => m.EquipmentQrCodePage),
+  },
 ];

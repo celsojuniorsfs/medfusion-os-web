@@ -1,0 +1,48 @@
+<div class="flex flex-col gap-4">
+  <div class="print:hidden">
+    <a
+      [routerLink]="['/clients', clientId, 'equipamentos']"
+      class="text-sm text-muted-foreground hover:text-foreground"
+    >
+      &larr; Voltar
+    </a>
+    <h1 class="mt-1 text-xl font-semibold">QR Code do equipamento</h1>
+    <p class="text-sm text-muted-foreground">Etiqueta pra colar no equipamento — impressora térmica, 40x30mm.</p>
+  </div>
+
+  @if (loading()) {
+    <ui-card class="print:hidden">
+      <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground"><ui-spinner /> Carregando...</div>
+    </ui-card>
+  } @else if (pageError()) {
+    <ui-card class="print:hidden"><p class="p-6 text-sm text-destructive">{{ pageError() }}</p></ui-card>
+  } @else {
+    <div>
+      <!--
+        Mesmo elemento serve de pré-visualização em tela E de conteúdo impresso — só o resto da
+        página (cabeçalho, botão, texto de ajuda) ganha print:hidden. Tamanho em mm (não rem/px)
+        de propósito: é o que casa com o @page físico de 40x30mm injetado pelo componente.
+      -->
+      <div
+        class="flex w-[40mm] items-center gap-2 border border-dashed border-border p-1 print:border-none print:p-0"
+      >
+        <div class="h-[26mm] w-[26mm] shrink-0 [&>svg]:block [&>svg]:h-full [&>svg]:w-full" [innerHTML]="qrCodeSvg()">
+        </div>
+        <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[7pt] leading-tight font-medium">
+          {{ client()?.name }}
+        </span>
+      </div>
+
+      <p class="mt-2 text-xs text-muted-foreground print:hidden">Pré-visualização em tamanho real (40x30mm).</p>
+
+      <button
+        type="button"
+        (click)="print()"
+        class="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 print:hidden"
+      >
+        <svg lucidePrinter [size]="16"></svg>
+        Imprimir
+      </button>
+    </div>
+  }
+</div>
