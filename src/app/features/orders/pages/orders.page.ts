@@ -21,7 +21,7 @@ import { CardComponent } from '../../../shared/ui/card.component';
         <div class="flex flex-col gap-2 sm:flex-row">
           <a
             routerLink="escanear"
-            class="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input px-4 text-sm font-medium hover:bg-accent sm:w-auto"
+            class="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-primary px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/10 sm:w-auto"
           >
             <svg lucideScanQrCode [size]="16"></svg>
             Escanear equipamento
