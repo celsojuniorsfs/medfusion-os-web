@@ -1,4 +1,4 @@
-import { equipmentMatchesSearch } from './equipments';
+import { equipmentMatchesSearch, formatAccessories } from './equipments';
 
 describe('equipmentMatchesSearch', () => {
   const equipment = {
@@ -29,5 +29,41 @@ describe('equipmentMatchesSearch', () => {
 
     expect(equipmentMatchesSearch(bareEquipment, 'bisturi')).toBe(true);
     expect(equipmentMatchesSearch(bareEquipment, 'monitor')).toBe(false);
+  });
+});
+
+describe('formatAccessories', () => {
+  it('returns a dash when there are no accessories', () => {
+    expect(formatAccessories({})).toBe('—');
+    expect(formatAccessories({ accessories: [] })).toBe('—');
+  });
+
+  it('joins accessory names with "; ", marking quantities greater than 1', () => {
+    const equipment = {
+      accessories: [
+        { accessory_id: '1', name: 'Cabo de força', quantity: 1 },
+        { accessory_id: '2', name: 'Eletrodo', quantity: 3 },
+      ],
+    };
+
+    // Achado em produção: interpolar o array direto no template produzia "[object Object]".
+    expect(formatAccessories(equipment)).toBe('Cabo de força; Eletrodo (x3)');
+  });
+
+  it('falls back to a placeholder when an accessory has no name', () => {
+    const equipment = { accessories: [{ accessory_id: '1', quantity: 2 }] };
+
+    expect(formatAccessories(equipment)).toBe('Acessório sem nome (x2)');
+  });
+
+  it('does not let a comma in an accessory name look like a separator between accessories', () => {
+    const equipment = {
+      accessories: [
+        { accessory_id: '1', name: 'Cabo, extra 2m', quantity: 1 },
+        { accessory_id: '2', name: 'Eletrodo', quantity: 3 },
+      ],
+    };
+
+    expect(formatAccessories(equipment)).toBe('Cabo, extra 2m; Eletrodo (x3)');
   });
 });

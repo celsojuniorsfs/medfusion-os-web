@@ -119,7 +119,7 @@
               <dt class="text-muted-foreground">PAT</dt>
               <dd>{{ equipment.asset_tag || '—' }}</dd>
               <dt class="text-muted-foreground">Acessórios</dt>
-              <dd>{{ equipment.accessories || '—' }}</dd>
+              <dd>{{ formatAccessories(equipment) }}</dd>
             </dl>
           }
         </ui-card>
