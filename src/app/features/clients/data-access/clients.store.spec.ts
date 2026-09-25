@@ -81,6 +81,40 @@ describe('ClientsStore', () => {
     expect(store.entities().map((c) => c.id)).toContain('c2');
   });
 
+  it('findOne() fetches a single client by id and adds it to entities', async () => {
+    const store = TestBed.inject(ClientsStore);
+
+    const promise = store.findOne('c1');
+    httpMock.expectOne(`${environment.apiUrl}/clients/c1`).flush({ data: aClient() });
+
+    const client = await promise;
+
+    expect(client.id).toBe('c1');
+    expect(store.entities().map((c) => c.id)).toContain('c1');
+  });
+
+  /**
+   * Achado do code review de 25/09/2026: addEntity não faz nada se o id já existir — usado no
+   * fluxo do QR Code (order-form.page.ts) pra resolver o cliente a partir do equipamento; sem
+   * isso, um cliente já visto numa listagem antes ficaria com dado desatualizado.
+   */
+  it('findOne() refreshes a client already in the store from an earlier load()', async () => {
+    const store = TestBed.inject(ClientsStore);
+
+    const loadPromise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/clients?page=1`)
+      .flush({ data: [aClient({ id: 'c1', name: 'Hospital São Lucas' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await loadPromise;
+
+    const findOnePromise = store.findOne('c1');
+    httpMock.expectOne(`${environment.apiUrl}/clients/c1`).flush({ data: aClient({ id: 'c1', name: 'Hospital São Lucas Ltda' }) });
+    await findOnePromise;
+
+    expect(store.entities()).toHaveLength(1);
+    expect(store.entities()[0].name).toBe('Hospital São Lucas Ltda');
+  });
+
   it('remove() takes the client out of the entity collection', async () => {
     const store = TestBed.inject(ClientsStore);
 

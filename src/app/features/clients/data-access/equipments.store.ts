@@ -7,6 +7,7 @@ import {
   removeEntity,
   setAllEntities,
   updateEntity,
+  upsertEntity,
   withEntities,
 } from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
@@ -38,8 +39,15 @@ export const EquipmentsStore = signalStore(
     loading: false,
     error: null,
   }),
-  withMethods((store, http = inject(HttpClient)) => ({
+  withMethods((store, http = inject(HttpClient)) => {
+    // Contador em closure — achado do code review de 25/09/2026: sem isso, trocar de cliente
+    // rápido (A, depois B antes da resposta de A chegar) podia deixar o catálogo de A na tela com
+    // o cliente B selecionado, se a resposta de A chegasse por último.
+    let loadRequestId = 0;
+
+    return {
     async load(clientId: string): Promise<void> {
+      const requestId = ++loadRequestId;
       patchState(store, { loading: true, error: null });
 
       try {
@@ -47,8 +55,11 @@ export const EquipmentsStore = signalStore(
           http.get<{ data: Equipment[] }>(`${environment.apiUrl}/clients/${clientId}/equipments`),
         );
 
+        if (requestId !== loadRequestId) return;
+
         patchState(store, setAllEntities(response.data ?? []), { loading: false });
       } catch {
+        if (requestId !== loadRequestId) return;
         patchState(store, { loading: false, error: 'Não foi possível carregar os equipamentos.' });
       }
     },
@@ -90,7 +101,10 @@ export const EquipmentsStore = signalStore(
         http.get<{ data: Equipment }>(`${environment.apiUrl}/equipments/${id}`),
       );
 
-      patchState(store, addEntity(response.data));
+      // upsertEntity (não addEntity): addEntity não faz nada se o id já estiver no store — quem
+      // escaneia o QR Code de um equipamento já visto nesta sessão ficaria vendo a cópia antiga.
+      // Achado do code review de 25/09/2026.
+      patchState(store, upsertEntity(response.data));
 
       return response.data;
     },
@@ -106,7 +120,8 @@ export const EquipmentsStore = signalStore(
     reset(): void {
       patchState(store, removeAllEntities(), { loading: false, error: null });
     },
-  })),
+    };
+  }),
   // Ver o mesmo bloco em clients.store.ts — core/ não conhece nenhuma feature (README), então a
   // dependência vai nesta direção (a feature injeta o AuthSessionStore de core/).
   withHooks((store) => {

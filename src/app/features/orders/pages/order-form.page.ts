@@ -10,6 +10,7 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
 import { EquipmentsStore } from '../../clients/data-access/equipments.store';
+import { todayLocalDate } from '../data-access/local-date';
 import { OrdersStore } from '../data-access/orders.store';
 
 type OrderInput = components['schemas']['OrderInput'];
@@ -44,6 +45,19 @@ interface ItemDraft {
   quantity: number;
   description: string;
   unit_price: number | null;
+}
+
+/** Usado tanto pra travar o equipamento vindo do QR Code quanto pra escolher um da busca. */
+function toExistingDraft(equipment: Equipment): ExistingEquipmentDraft {
+  return {
+    kind: 'existing',
+    equipment_id: equipment.id,
+    name: equipment.name ?? '',
+    brand: equipment.brand ?? null,
+    model: equipment.model ?? null,
+    serial_number: equipment.serial_number ?? null,
+    accessories: '',
+  };
 }
 
 /**
@@ -137,7 +151,7 @@ export class OrderFormPage implements OnInit, OnDestroy {
 
   protected readonly form = this.fb.nonNullable.group({
     number: [1, [Validators.required, Validators.min(1)]],
-    date: [new Date().toISOString().slice(0, 10), Validators.required],
+    date: [todayLocalDate(), Validators.required],
     picked_up: [false],
     warranty: [false],
     technical_training: [false],
@@ -207,17 +221,7 @@ export class OrderFormPage implements OnInit, OnDestroy {
       this.lockedByQr.set(true);
       this.clientId.set(client.id);
       this.clientTouched.set(true);
-      this.equipmentDrafts.set([
-        {
-          kind: 'existing',
-          equipment_id: equipment.id,
-          name: equipment.name ?? '',
-          brand: equipment.brand ?? null,
-          model: equipment.model ?? null,
-          serial_number: equipment.serial_number ?? null,
-          accessories: '',
-        },
-      ]);
+      this.equipmentDrafts.set([toExistingDraft(equipment)]);
       this.equipmentsTouched.set(true);
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 404) {
@@ -239,6 +243,10 @@ export class OrderFormPage implements OnInit, OnDestroy {
   }
 
   async selectClient(client: Client): Promise<void> {
+    // Sem isso, uma busca ainda em voo (debounce de 300ms) pode chegar DEPOIS da seleção e
+    // substituir a lista de clientes — se o cliente escolhido não estiver nela, `selectedClient()`
+    // deixa de achá-lo e a busca reaparece vazia, mesmo com `clientId` continuando setado.
+    clearTimeout(this.clientSearchTimeout);
     this.clientTouched.set(true);
     this.clientId.set(client.id);
     this.clientSearch.set('');
@@ -266,18 +274,7 @@ export class OrderFormPage implements OnInit, OnDestroy {
 
   selectEquipment(equipment: Equipment): void {
     this.equipmentsTouched.set(true);
-    this.equipmentDrafts.update((current) => [
-      ...current,
-      {
-        kind: 'existing',
-        equipment_id: equipment.id,
-        name: equipment.name ?? '',
-        brand: equipment.brand ?? null,
-        model: equipment.model ?? null,
-        serial_number: equipment.serial_number ?? null,
-        accessories: '',
-      },
-    ]);
+    this.equipmentDrafts.update((current) => [...current, toExistingDraft(equipment)]);
     this.equipmentSearch.set('');
   }
 
@@ -313,10 +310,14 @@ export class OrderFormPage implements OnInit, OnDestroy {
     const description = this.newItemDescription().trim();
     if (!description) return;
 
-    this.itemDrafts.update((current) => [
-      ...current,
-      { quantity: this.newItemQuantity(), description, unit_price: this.newItemUnitPrice() },
-    ]);
+    // Achado do code review de 25/09/2026: sem isso, uma quantidade ou valor negativo digitado
+    // aqui virava um item com preço negativo, derrubando o "Total (calculado)" — `unit_price`
+    // negativo/zero vira `null` (mesmo tratamento de "sem preço" já usado pra peça embutida).
+    const quantity = Math.max(1, this.newItemQuantity());
+    const unitPrice = this.newItemUnitPrice();
+    const safeUnitPrice = unitPrice !== null && unitPrice > 0 ? unitPrice : null;
+
+    this.itemDrafts.update((current) => [...current, { quantity, description, unit_price: safeUnitPrice }]);
     this.newItemQuantity.set(1);
     this.newItemDescription.set('');
     this.newItemUnitPrice.set(null);
@@ -402,11 +403,26 @@ export class OrderFormPage implements OnInit, OnDestroy {
         }
       } else if (error instanceof HttpErrorResponse && error.status === 422) {
         const errors = error.error?.errors ?? {};
+        // equipments.*/items.*/client_id não são FormControls (as listas ficam fora do form
+        // reativo, ver comentário da classe) — `form.get(field)` devolve null pra elas, e sem
+        // isso o erro passava em silêncio com a mensagem genérica não destacando nada de verdade.
+        let hasUnmatchedListError = false;
         for (const field of Object.keys(errors)) {
-          this.form.get(field)?.setErrors({ server: true });
-          this.form.get(field)?.markAsTouched();
+          const control = this.form.get(field);
+          if (control) {
+            control.setErrors({ server: true });
+            control.markAsTouched();
+          } else if (field.startsWith('equipments.') || field.startsWith('items.') || field === 'client_id') {
+            hasUnmatchedListError = true;
+          }
         }
-        this.errorMessage.set('Confira os campos destacados.');
+        // Nunca mostra o texto que a API manda (sem lang/pt_BR publicado, vem em inglês) — mesma
+        // convenção de equipment-form.page.ts: só usa as chaves do 422 pra decidir a mensagem.
+        this.errorMessage.set(
+          hasUnmatchedListError
+            ? 'Confira os equipamentos e peças adicionados — um deles tem um dado inválido.'
+            : 'Confira os campos destacados.',
+        );
       } else {
         this.errorMessage.set('Não foi possível abrir a OS. Tente novamente.');
       }

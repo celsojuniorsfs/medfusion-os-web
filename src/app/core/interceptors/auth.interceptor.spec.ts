@@ -57,7 +57,7 @@ describe('authInterceptor', () => {
   it('on a 401 response, clears the session and navigates to /login', () => {
     localStorage.setItem(TOKEN_KEY, 'meu-token');
     const auth = TestBed.inject(AuthSessionStore);
-    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+    const navigateSpy = vi.spyOn(router, 'navigate');
 
     http.get('/qualquer').subscribe({ error: () => {} });
 
@@ -67,7 +67,29 @@ describe('authInterceptor', () => {
 
     expect(auth.token()).toBeNull();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(navigateSpy).toHaveBeenCalledWith('/login');
+    // Sem navegação em andamento (chamada HTTP direta, não através de uma rota/guard), não há
+    // returnUrl pra preservar — ver o teste de returnUrl abaixo pro caso com navegação real.
+    expect(navigateSpy).toHaveBeenCalledWith(['/login'], undefined);
+  });
+
+  it('on a 401 during a route navigation, preserves the intended URL as returnUrl', () => {
+    // Mesmo cenário do web#101/authGuard: um token salvo mas expirado. restoreSession() chama
+    // /auth/me, cai aqui, e sem isso o técnico perdia o link do QR Code e caía sempre em '/'
+    // depois de logar de novo. router.getCurrentNavigation() só é não-nulo com uma navegação de
+    // verdade em andamento — dublado aqui pra não depender do timing exato de guards assíncronos.
+    localStorage.setItem(TOKEN_KEY, 'token-expirado');
+    TestBed.inject(AuthSessionStore);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    const intendedUrl = router.parseUrl('/orders/novo/equipamento/eq-1');
+    vi.spyOn(router, 'getCurrentNavigation').mockReturnValue({ extractedUrl: intendedUrl } as never);
+
+    http.get('/auth/me').subscribe({ error: () => {} });
+
+    httpMock
+      .expectOne('/auth/me')
+      .flush({ message: 'Unauthenticated.' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/orders/novo/equipamento/eq-1' } });
   });
 
   it('on a non-401 error response, leaves the session untouched', () => {
@@ -75,7 +97,7 @@ describe('authInterceptor', () => {
     // de erro. O interceptor só reage especificamente a 401.
     localStorage.setItem(TOKEN_KEY, 'meu-token');
     const auth = TestBed.inject(AuthSessionStore);
-    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+    const navigateSpy = vi.spyOn(router, 'navigate');
 
     http.post('/qualquer', {}).subscribe({ error: () => {} });
 

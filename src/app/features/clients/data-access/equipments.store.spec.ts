@@ -112,6 +112,43 @@ describe('EquipmentsStore', () => {
     await expect(promise).rejects.toMatchObject({ status: 404 });
   });
 
+  /** Achado do code review de 25/09/2026: addEntity não faz nada se o id já existir. */
+  it('findOne() refreshes an equipment already in the store from an earlier load()', async () => {
+    const store = TestBed.inject(EquipmentsStore);
+
+    const loadPromise = store.load(CLIENT_ID);
+    httpMock
+      .expectOne(`${environment.apiUrl}/clients/${CLIENT_ID}/equipments`)
+      .flush({ data: [anEquipment({ id: 'e1', name: 'Bisturi' })] });
+    await loadPromise;
+
+    const findOnePromise = store.findOne('e1');
+    httpMock.expectOne(`${environment.apiUrl}/equipments/e1`).flush({ data: anEquipment({ id: 'e1', name: 'Bisturi Elétrico' }) });
+    await findOnePromise;
+
+    expect(store.entities()).toHaveLength(1);
+    expect(store.entities()[0].name).toBe('Bisturi Elétrico');
+  });
+
+  /** Achado do code review de 25/09/2026: sem guarda de requisição, trocar de cliente rápido
+   *  podia deixar o catálogo do cliente ERRADO na tela, se a resposta antiga chegasse por último. */
+  it('load() ignores a stale response for a client that is no longer the current one', async () => {
+    const store = TestBed.inject(EquipmentsStore);
+
+    const firstCall = store.load('client-A');
+    const firstRequest = httpMock.expectOne(`${environment.apiUrl}/clients/client-A/equipments`);
+
+    const secondCall = store.load('client-B');
+    const secondRequest = httpMock.expectOne(`${environment.apiUrl}/clients/client-B/equipments`);
+
+    secondRequest.flush({ data: [anEquipment({ id: 'from-b' })] });
+    await secondCall;
+    firstRequest.flush({ data: [anEquipment({ id: 'from-a' })] });
+    await firstCall;
+
+    expect(store.entities().map((e) => e.id)).toEqual(['from-b']);
+  });
+
   it('reset() clears entities and error/loading state', async () => {
     const store = TestBed.inject(EquipmentsStore);
 

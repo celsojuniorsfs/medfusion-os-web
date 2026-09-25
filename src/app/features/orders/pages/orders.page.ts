@@ -81,6 +81,9 @@ export class OrdersPage implements OnInit, OnDestroy {
   }
 
   selectClientFilter(client: Client): void {
+    // Ver o mesmo comentário em order-form.page.ts::selectClient — sem isso, uma busca ainda em
+    // voo pode substituir a lista de clientes depois da seleção.
+    clearTimeout(this.clientSearchTimeout);
     this.clientFilterId.set(client.id);
     this.clientFilterSearch.set('');
     this.applyFilters();

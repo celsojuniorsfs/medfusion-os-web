@@ -125,6 +125,54 @@ describe('OrdersStore', () => {
     expect(store.entities().map((o) => o.id)).toContain('order-1');
   });
 
+  /**
+   * Achado do code review de 25/09/2026: addEntity não faz nada se o id já existir — quem abre
+   * uma OS que já apareceu antes numa listagem ficaria vendo a cópia antiga, não o que este GET
+   * acabou de buscar.
+   */
+  it('findOne() refreshes an order that was already in the store from an earlier load()', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const loadPromise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ data: [anOrder({ id: 'order-1', number: 1337 })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await loadPromise;
+    expect(store.entities()[0].number).toBe(1337);
+
+    const findOnePromise = store.findOne('order-1');
+    httpMock.expectOne(`${environment.apiUrl}/orders/order-1`).flush({ data: anOrder({ id: 'order-1', number: 9999 }) });
+    await findOnePromise;
+
+    expect(store.entities()).toHaveLength(1);
+    expect(store.entities()[0].number).toBe(9999);
+  });
+
+  /**
+   * Achado do code review de 25/09/2026: sem uma guarda de requisição, duas chamadas de load()
+   * disparadas em sequência (trocar de filtro rápido) podiam terminar fora de ordem e deixar a
+   * tabela mostrando o resultado da chamada mais ANTIGA.
+   */
+  it('load() ignores a stale response that arrives after a newer call already resolved', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const firstCall = store.load(1, { status: 'open' });
+    const firstRequest = httpMock.expectOne(`${environment.apiUrl}/orders?page=1&status=open`);
+
+    const secondCall = store.load(1, { status: 'completed' });
+    const secondRequest = httpMock.expectOne(`${environment.apiUrl}/orders?page=1&status=completed`);
+
+    // A segunda chamada responde primeiro...
+    secondRequest.flush({ data: [anOrder({ id: 'order-2' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await secondCall;
+    // ...e só depois a primeira (mais antiga) responde — não pode sobrescrever o resultado da segunda.
+    firstRequest.flush({ data: [anOrder({ id: 'order-1' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await firstCall;
+
+    expect(store.entities().map((o) => o.id)).toEqual(['order-2']);
+    expect(store.filters()).toEqual({ status: 'completed' });
+  });
+
   it('reset() clears entities and error/loading state', async () => {
     const store = TestBed.inject(OrdersStore);
 
