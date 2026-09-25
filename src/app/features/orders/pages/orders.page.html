@@ -132,7 +132,7 @@
             </div>
             <div class="mt-1 flex items-center justify-between text-sm text-muted-foreground">
               <span class="truncate">{{ order.client?.name }}</span>
-              <span>{{ order.date }}</span>
+              <span>{{ formatDateBr(order.date) }}</span>
             </div>
             <div class="mt-1 text-sm">{{ order.total ? 'R$ ' + (order.total | number: '1.2-2') : '—' }}</div>
           </ui-card>
@@ -160,7 +160,7 @@
                   <a [routerLink]="[order.id]" class="font-medium hover:underline">{{ order.number }}</a>
                 </td>
                 <td class="max-w-[14rem] truncate px-4 py-3">{{ order.client?.name }}</td>
-                <td class="whitespace-nowrap px-4 py-3">{{ order.date }}</td>
+                <td class="whitespace-nowrap px-4 py-3">{{ formatDateBr(order.date) }}</td>
                 <td class="whitespace-nowrap px-4 py-3">
                   @if (order.status) {
                     <span

@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
+import { formatDateBr } from '../data-access/local-date';
 import { orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
@@ -28,6 +29,7 @@ export class OrderDetailPage implements OnInit {
 
   protected readonly orderStatusLabel = orderStatusLabel;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
+  protected readonly formatDateBr = formatDateBr;
 
   protected readonly order = computed(() => this.store.entities().find((order) => order.id === this.orderId));
 

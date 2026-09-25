@@ -1,4 +1,4 @@
-import { todayLocalDate } from './local-date';
+import { formatDateBr, todayLocalDate } from './local-date';
 
 describe('todayLocalDate', () => {
   beforeEach(() => {
@@ -21,5 +21,16 @@ describe('todayLocalDate', () => {
     vi.setSystemTime(new Date('2026-01-05T10:00:00-03:00'));
 
     expect(todayLocalDate()).toBe('2026-01-05');
+  });
+});
+
+describe('formatDateBr', () => {
+  it('rearranges an ISO date into dd/MM/yyyy', () => {
+    expect(formatDateBr('2026-09-25')).toBe('25/09/2026');
+  });
+
+  it('returns an empty string for a missing date', () => {
+    expect(formatDateBr(undefined)).toBe('');
+    expect(formatDateBr(null)).toBe('');
   });
 });
