@@ -93,11 +93,6 @@ describe('ClientsStore', () => {
     expect(store.entities().map((c) => c.id)).toContain('c1');
   });
 
-  /**
-   * Achado do code review de 25/09/2026: addEntity não faz nada se o id já existir — usado no
-   * fluxo do QR Code (order-form.page.ts) pra resolver o cliente a partir do equipamento; sem
-   * isso, um cliente já visto numa listagem antes ficaria com dado desatualizado.
-   */
   it('findOne() refreshes a client already in the store from an earlier load()', async () => {
     const store = TestBed.inject(ClientsStore);
 
@@ -151,9 +146,8 @@ describe('ClientsStore', () => {
   });
 
   /**
-   * Achado do code review de 13/09/2026: AuthSessionStore.clearSession() não limpava este
-   * store — como `core/` não pode importar `features/` (ver README), a reação ao logout mora
-   * aqui, via withHooks observando AuthSessionStore (a direção de dependência permitida).
+   * `core/` não pode importar `features/` (ver README), então a reação ao logout mora aqui, via
+   * withHooks observando AuthSessionStore (a direção de dependência permitida).
    */
   it('resets itself automatically when the session becomes unauthenticated (logout)', async () => {
     localStorage.setItem(TOKEN_KEY, 'token-valido');

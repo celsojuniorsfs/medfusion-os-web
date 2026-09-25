@@ -7,13 +7,12 @@ import { AuthSessionStore } from '../auth/auth-session.store';
  * foi restaurado nesta carga de página (ex.: refresh do navegador), tenta restaurar antes de
  * decidir — evita mandar pro login alguém que só ainda não recarregou a sessão.
  *
- * Achado do code review de 13/09/2026: quando o token salvo já não era mais válido, este guard
- * E o authInterceptor navegavam pro /login ao mesmo tempo — restoreSession() faz uma chamada
- * HTTP de verdade (GET /auth/me), o 401 dela já passa pelo interceptor (que limpa a sessão e
- * navega), e o guard navegava de novo em cima por retornar seu próprio UrlTree. Aqui só bloqueia
- * a ativação (`false`) nesse caso — o interceptor já cuidou do redirecionamento. O UrlTree
- * próprio fica só pra quando não existe token nenhum pra tentar (o interceptor nunca chega a
- * rodar, porque nenhuma chamada HTTP acontece).
+ * Quando o token salvo já não é mais válido, este guard NÃO constrói seu próprio UrlTree:
+ * restoreSession() faz uma chamada HTTP de verdade (GET /auth/me), o 401 dela já passa pelo
+ * interceptor (que limpa a sessão e navega pro /login), e um segundo redirecionamento aqui seria
+ * redundante — só bloqueia a ativação (`false`). O UrlTree próprio fica só pra quando não existe
+ * token nenhum pra tentar (o interceptor nunca chega a rodar, porque nenhuma chamada HTTP
+ * acontece).
  */
 export const authGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthSessionStore);

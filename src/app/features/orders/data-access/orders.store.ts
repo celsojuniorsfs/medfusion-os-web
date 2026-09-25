@@ -51,9 +51,9 @@ export const OrdersStore = signalStore(
   }),
   withMethods((store, http = inject(HttpClient)) => {
     // Contador de requisição em closure (não é estado reativo, não precisa aparecer no
-    // signalStore) — achado do code review de 25/09/2026: sem isso, duas chamadas de load()
-    // disparadas em sequência rápida (trocar filtro, trocar de novo) podiam terminar fora de
-    // ordem e deixar a tabela mostrando o resultado da chamada mais ANTIGA.
+    // signalStore): sem isso, duas chamadas de load() disparadas em sequência rápida (trocar
+    // filtro, trocar de novo) podiam terminar fora de ordem e deixar a tabela mostrando o
+    // resultado da chamada mais ANTIGA.
     let loadRequestId = 0;
 
     return {
@@ -129,13 +129,13 @@ export const OrdersStore = signalStore(
 
         // upsertEntity (não addEntity): addEntity não faz nada se o id já existir — quem abre uma OS
         // que já estava na listagem via a busca de agora ficaria vendo a cópia antiga carregada por
-        // ela, não o que este GET acabou de trazer. Achado do code review de 25/09/2026.
+        // ela, não o que este GET acabou de trazer.
         patchState(store, upsertEntity(response.data));
 
         return response.data;
       },
 
-      /** Ver EquipmentsStore.reset()/ClientsStore.reset() — mesmo achado do code review de 13/09/2026. */
+      /** Ver EquipmentsStore.reset()/ClientsStore.reset(). */
       reset(): void {
         patchState(store, removeAllEntities(), {
           loading: false,

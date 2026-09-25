@@ -40,9 +40,9 @@ export const EquipmentsStore = signalStore(
     error: null,
   }),
   withMethods((store, http = inject(HttpClient)) => {
-    // Contador em closure — achado do code review de 25/09/2026: sem isso, trocar de cliente
-    // rápido (A, depois B antes da resposta de A chegar) podia deixar o catálogo de A na tela com
-    // o cliente B selecionado, se a resposta de A chegasse por último.
+    // Contador em closure: sem isso, trocar de cliente rápido (A, depois B antes da resposta de A
+    // chegar) podia deixar o catálogo de A na tela com o cliente B selecionado, se a resposta de A
+    // chegasse por último.
     let loadRequestId = 0;
 
     return {
@@ -103,16 +103,14 @@ export const EquipmentsStore = signalStore(
 
       // upsertEntity (não addEntity): addEntity não faz nada se o id já estiver no store — quem
       // escaneia o QR Code de um equipamento já visto nesta sessão ficaria vendo a cópia antiga.
-      // Achado do code review de 25/09/2026.
       patchState(store, upsertEntity(response.data));
 
       return response.data;
     },
 
     /**
-     * Achado do code review de 13/09/2026: AuthSessionStore.clearSession() não limpava este
-     * store — como ele é `providedIn: 'root'`, o catálogo do último cliente visto continuava em
-     * memória depois do logout. Sem chance real de vazamento entre usuários diferentes (todo
+     * `providedIn: 'root'`, então o catálogo do último cliente visto continuaria em memória
+     * depois do logout sem isso. Sem chance real de vazamento entre usuários diferentes (todo
      * técnico autenticado já enxerga os mesmos dados, sem escopo por usuário — ver
      * api-conventions.md), mas um segundo técnico no mesmo aparelho podia ver, por um instante,
      * o catálogo do cliente que o anterior deixou carregado antes do load() novo terminar.

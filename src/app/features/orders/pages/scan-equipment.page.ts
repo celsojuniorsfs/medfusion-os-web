@@ -40,10 +40,10 @@ export class ScanEquipmentPage implements AfterViewInit, OnDestroy {
 
   private scanner?: QrScanner;
   private navigated = false;
-  // Achado do code review de 25/09/2026: a sondagem de câmera é assíncrona — se a pessoa sair da
-  // tela enquanto ela ainda está em voo, ngOnDestroy roda com `scanner` ainda undefined (nada pra
-  // destruir), e a câmera liga sozinha logo depois, numa tela que já fechou. Essa flag é conferida
-  // depois do `await` pra nunca instanciar/iniciar o QrScanner se isso já aconteceu.
+  // A sondagem de câmera é assíncrona — se a pessoa sair da tela enquanto ela ainda está em voo,
+  // ngOnDestroy roda com `scanner` ainda undefined (nada pra destruir), e a câmera ligaria sozinha
+  // logo depois, numa tela que já fechou. Essa flag é conferida depois do `await` pra nunca
+  // instanciar/iniciar o QrScanner se isso já aconteceu.
   private destroyed = false;
 
   async ngAfterViewInit(): Promise<void> {

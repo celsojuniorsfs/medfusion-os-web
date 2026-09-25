@@ -310,9 +310,8 @@ export class OrderFormPage implements OnInit, OnDestroy {
     const description = this.newItemDescription().trim();
     if (!description) return;
 
-    // Achado do code review de 25/09/2026: sem isso, uma quantidade ou valor negativo digitado
-    // aqui virava um item com preço negativo, derrubando o "Total (calculado)" — `unit_price`
-    // negativo/zero vira `null` (mesmo tratamento de "sem preço" já usado pra peça embutida).
+    // `unit_price` negativo/zero vira `null` (mesmo tratamento de "sem preço" já usado pra peça
+    // embutida) — sem isso, um valor negativo digitado aqui derrubava o "Total (calculado)".
     const quantity = Math.max(1, this.newItemQuantity());
     const unitPrice = this.newItemUnitPrice();
     const safeUnitPrice = unitPrice !== null && unitPrice > 0 ? unitPrice : null;

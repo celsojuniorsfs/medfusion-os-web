@@ -125,11 +125,6 @@ describe('OrdersStore', () => {
     expect(store.entities().map((o) => o.id)).toContain('order-1');
   });
 
-  /**
-   * Achado do code review de 25/09/2026: addEntity não faz nada se o id já existir — quem abre
-   * uma OS que já apareceu antes numa listagem ficaria vendo a cópia antiga, não o que este GET
-   * acabou de buscar.
-   */
   it('findOne() refreshes an order that was already in the store from an earlier load()', async () => {
     const store = TestBed.inject(OrdersStore);
 
@@ -148,11 +143,6 @@ describe('OrdersStore', () => {
     expect(store.entities()[0].number).toBe(9999);
   });
 
-  /**
-   * Achado do code review de 25/09/2026: sem uma guarda de requisição, duas chamadas de load()
-   * disparadas em sequência (trocar de filtro rápido) podiam terminar fora de ordem e deixar a
-   * tabela mostrando o resultado da chamada mais ANTIGA.
-   */
   it('load() ignores a stale response that arrives after a newer call already resolved', async () => {
     const store = TestBed.inject(OrdersStore);
 
@@ -187,7 +177,7 @@ describe('OrdersStore', () => {
     expect(store.loading()).toBe(false);
   });
 
-  /** Ver o mesmo teste nos outros stores — achado do code review de 13/09/2026. */
+  /** Ver o mesmo teste nos outros stores. */
   it('resets itself automatically when the session becomes unauthenticated (logout)', async () => {
     localStorage.setItem(TOKEN_KEY, 'token-valido');
     const auth = TestBed.inject(AuthSessionStore);

@@ -81,9 +81,8 @@ export const AccessoriesStore = signalStore(
       patchState(store, upsertEntities(accessories));
     },
 
-    // Mesmo achado do code review de 13/09/2026 em EquipmentsStore/ClientsStore — este store
-    // também é `providedIn: 'root'`, então o catálogo carregado sobreviveria a um logout sem
-    // isso.
+    // `providedIn: 'root'`, então o catálogo carregado sobreviveria a um logout sem isso — mesmo
+    // motivo de EquipmentsStore.reset()/ClientsStore.reset().
     reset(): void {
       patchState(store, removeAllEntities(), { loading: false, error: null });
     },
