@@ -6,14 +6,22 @@ type Equipment = components['schemas']['Equipment'];
  * `equipment.accessories` é uma lista de objetos ({ accessory_id, name, quantity }), não uma
  * string — interpolar direto no template produz "[object Object]" (achado em produção). Formata
  * pra "Nome (xQtd)" quando a quantidade é maior que 1, só "Nome" quando é 1.
+ *
+ * `name` é opcional no schema (EquipmentAccessory) — sem o fallback, um acessório sem nome viraria
+ * o texto "undefined" na tela. Separador `; `, não `, `: nome de acessório é texto livre (o
+ * técnico pode cadastrar um novo com vírgula no meio), e uma vírgula ali seria indistinguível do
+ * separador entre acessórios diferentes.
  */
 export function formatAccessories(equipment: Equipment): string {
   const accessories = equipment.accessories ?? [];
   if (accessories.length === 0) return '—';
 
   return accessories
-    .map((accessory) => (accessory.quantity && accessory.quantity > 1 ? `${accessory.name} (x${accessory.quantity})` : accessory.name))
-    .join(', ');
+    .map((accessory) => {
+      const name = accessory.name || 'Acessório sem nome';
+      return accessory.quantity && accessory.quantity > 1 ? `${name} (x${accessory.quantity})` : name;
+    })
+    .join('; ');
 }
 
 /**
