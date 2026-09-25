@@ -1,0 +1,16 @@
+import { ORDER_STATUSES, orderStatusBadgeClass, orderStatusLabel } from './order-status';
+
+describe('order-status', () => {
+  it('has a label and a badge class for every status', () => {
+    for (const status of ORDER_STATUSES) {
+      expect(orderStatusLabel(status)).toBeTruthy();
+      expect(orderStatusBadgeClass(status)).toBeTruthy();
+    }
+  });
+
+  it('labels a few statuses in Portuguese, matching the reference mockup', () => {
+    expect(orderStatusLabel('open')).toBe('Aberta');
+    expect(orderStatusLabel('awaiting_approval')).toBe('Aguardando aprovação');
+    expect(orderStatusLabel('completed')).toBe('Concluída');
+  });
+});

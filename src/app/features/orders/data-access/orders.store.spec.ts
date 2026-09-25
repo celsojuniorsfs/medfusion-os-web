@@ -80,6 +80,51 @@ describe('OrdersStore', () => {
     await expect(promise).rejects.toBeInstanceOf(HttpErrorResponse);
   });
 
+  it('load() populates entities and pagination metadata, filtering only defined params', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.load(2, { client_id: 'client-1', status: 'open' });
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=2&client_id=client-1&status=open`)
+      .flush({
+        data: [anOrder()],
+        meta: { current_page: 2, last_page: 3, per_page: 15, total: 40 },
+      });
+    await promise;
+
+    expect(store.entities()).toHaveLength(1);
+    expect(store.page()).toBe(2);
+    expect(store.lastPage()).toBe(3);
+    expect(store.total()).toBe(40);
+    expect(store.loading()).toBe(false);
+    expect(store.error()).toBeNull();
+  });
+
+  it('load() sets an error message and clears loading on failure', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ message: 'Erro' }, { status: 500, statusText: 'Server Error' });
+    await promise;
+
+    expect(store.loading()).toBe(false);
+    expect(store.error()).toBe('Não foi possível carregar as ordens de serviço.');
+  });
+
+  it('findOne() fetches a single order by id and adds it to entities', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.findOne('order-1');
+    httpMock.expectOne(`${environment.apiUrl}/orders/order-1`).flush({ data: anOrder() });
+
+    const order = await promise;
+
+    expect(order.id).toBe('order-1');
+    expect(store.entities().map((o) => o.id)).toContain('order-1');
+  });
+
   it('reset() clears entities and error/loading state', async () => {
     const store = TestBed.inject(OrdersStore);
 

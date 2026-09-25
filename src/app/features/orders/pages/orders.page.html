@@ -1,0 +1,210 @@
+<div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-xl font-semibold">Ordens de Serviço</h1>
+      <p class="text-sm text-muted-foreground">Ordenadas por data, mais recente primeiro.</p>
+    </div>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <a
+        routerLink="escanear"
+        class="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-primary px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/10 sm:w-auto"
+      >
+        <svg lucideScanQrCode [size]="16"></svg>
+        Escanear equipamento
+      </a>
+      <a
+        routerLink="novo"
+        class="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto"
+      >
+        <svg lucidePlus [size]="16"></svg>
+        Nova OS
+      </a>
+    </div>
+  </div>
+
+  <ui-card class="flex flex-col gap-3 p-4">
+    <span class="text-xs font-medium uppercase text-muted-foreground">Filtros</span>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
+      <div class="flex flex-col gap-1.5 sm:col-span-2">
+        <label for="client-filter" class="text-xs font-medium text-muted-foreground">Cliente</label>
+        @if (selectedClientFilter(); as client) {
+          <div class="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/40 px-3">
+            <span class="flex-1 truncate text-sm">{{ client.name }}</span>
+            <button type="button" (click)="clearClientFilter()" class="text-xs text-muted-foreground hover:underline">
+              Trocar
+            </button>
+          </div>
+        } @else {
+          <div class="relative">
+            <input
+              id="client-filter"
+              type="text"
+              placeholder="Buscar por nome ou CNPJ..."
+              [value]="clientFilterSearch()"
+              (input)="onClientFilterSearchInput($any($event.target).value)"
+              class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+            @if (clientFilterSearch().trim()) {
+              <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+                @for (client of clientsStore.entities(); track client.id) {
+                  <button
+                    type="button"
+                    (click)="selectClientFilter(client)"
+                    class="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                  >
+                    {{ client.name }}
+                  </button>
+                } @empty {
+                  <p class="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado.</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="status-filter" class="text-xs font-medium text-muted-foreground">Status</label>
+        <select
+          id="status-filter"
+          [value]="statusFilter()"
+          (change)="onStatusFilterChange($any($event.target).value)"
+          class="h-9 w-full rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          <option value="">Todos</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ orderStatusLabel(status) }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label for="date-from" class="text-xs font-medium text-muted-foreground">De</label>
+          <input
+            id="date-from"
+            type="date"
+            [value]="dateFromFilter()"
+            (change)="onDateFromChange($any($event.target).value)"
+            class="h-9 w-full rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="date-to" class="text-xs font-medium text-muted-foreground">Até</label>
+          <input
+            id="date-to"
+            type="date"
+            [value]="dateToFilter()"
+            (change)="onDateToChange($any($event.target).value)"
+            class="h-9 w-full rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+      </div>
+    </div>
+  </ui-card>
+
+  @if (store.loading()) {
+    <ui-card>
+      <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground"><ui-spinner /> Carregando...</div>
+    </ui-card>
+  } @else if (store.error()) {
+    <ui-card><p class="p-6 text-sm text-destructive">{{ store.error() }}</p></ui-card>
+  } @else if (store.entities().length === 0) {
+    <ui-card>
+      <p class="p-6 text-sm text-muted-foreground">Nenhuma ordem de serviço encontrada para esses filtros.</p>
+    </ui-card>
+  } @else {
+    <!-- Abaixo de 768px: um card por OS, sem tabela. -->
+    <div class="flex flex-col gap-3 md:hidden">
+      @for (order of store.entities(); track order.id) {
+        <a [routerLink]="[order.id]" class="block">
+          <ui-card class="p-4">
+            <div class="flex items-start justify-between gap-2">
+              <span class="font-medium">Nº {{ order.number }}</span>
+              @if (order.status) {
+                <span
+                  class="inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-xs font-medium"
+                  [class]="orderStatusBadgeClass(order.status)"
+                >
+                  {{ orderStatusLabel(order.status) }}
+                </span>
+              }
+            </div>
+            <div class="mt-1 flex items-center justify-between text-sm text-muted-foreground">
+              <span class="truncate">{{ order.client?.name }}</span>
+              <span>{{ order.date }}</span>
+            </div>
+            <div class="mt-1 text-sm">{{ order.total ? 'R$ ' + (order.total | number: '1.2-2') : '—' }}</div>
+          </ui-card>
+        </a>
+      }
+    </div>
+
+    <!-- A partir de 768px: tabela. -->
+    <ui-card class="hidden md:block">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border text-left text-muted-foreground">
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Nº</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Cliente</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Data</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Status</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of store.entities(); track order.id) {
+              <tr class="border-b border-border last:border-0 hover:bg-accent/50">
+                <td class="whitespace-nowrap px-4 py-3">
+                  <a [routerLink]="[order.id]" class="font-medium hover:underline">{{ order.number }}</a>
+                </td>
+                <td class="max-w-[14rem] truncate px-4 py-3">{{ order.client?.name }}</td>
+                <td class="whitespace-nowrap px-4 py-3">{{ order.date }}</td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  @if (order.status) {
+                    <span
+                      class="inline-flex h-5 items-center whitespace-nowrap rounded-full px-2 text-xs font-medium"
+                      [class]="orderStatusBadgeClass(order.status)"
+                    >
+                      {{ orderStatusLabel(order.status) }}
+                    </span>
+                  }
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  {{ order.total ? 'R$ ' + (order.total | number: '1.2-2') : '—' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </ui-card>
+  }
+
+  @if (!store.loading() && !store.error() && store.entities().length > 0) {
+    <div class="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <span>Página {{ store.page() }} de {{ store.lastPage() }} — {{ store.total() }} no total</span>
+      <div class="flex gap-1">
+        <button
+          type="button"
+          [disabled]="store.page() <= 1"
+          (click)="goToPage(store.page() - 1)"
+          class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
+        >
+          <svg lucideChevronLeft [size]="14"></svg>
+          Anterior
+        </button>
+        <button
+          type="button"
+          [disabled]="store.page() >= store.lastPage()"
+          (click)="goToPage(store.page() + 1)"
+          class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
+        >
+          Próxima
+          <svg lucideChevronRight [size]="14"></svg>
+        </button>
+      </div>
+    </div>
+  }
+</div>
