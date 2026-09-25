@@ -89,18 +89,21 @@ export class OrderDetailPage implements OnInit {
         !order.pdf_generated_at ||
         (!!order.updated_at && new Date(order.pdf_generated_at) < new Date(order.updated_at));
 
-      const pdf = needsGeneration
-        ? await this.store.generatePdf(order.id)
-        : ((await this.store.getPdf(order.id)) ?? (await this.store.generatePdf(order.id)));
-
-      if (tab) {
-        tab.location.href = pdf.url!;
-      } else {
-        window.location.href = pdf.url!;
+      let pdf = needsGeneration ? null : await this.store.getPdf(order.id);
+      if (!pdf) {
+        // Também cobre o caso raro de getPdf() 404ar apesar de pdf_generated_at estar
+        // preenchido (registro sumiu no servidor) — sempre que ESTA chamada gera de verdade,
+        // markPdfGenerated roda, não importa qual ramo decidiu gerar.
+        pdf = await this.store.generatePdf(order.id);
+        if (pdf.generated_at) this.store.markPdfGenerated(order.id, pdf.generated_at);
       }
 
-      if (needsGeneration) {
-        await this.store.findOne(order.id);
+      if (!pdf.url) throw new Error('Resposta do PDF sem URL.');
+
+      if (tab) {
+        tab.location.href = pdf.url;
+      } else {
+        window.location.href = pdf.url;
       }
     } catch {
       tab?.close();

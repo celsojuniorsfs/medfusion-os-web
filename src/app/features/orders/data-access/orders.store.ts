@@ -5,6 +5,7 @@ import {
   addEntity,
   removeAllEntities,
   setAllEntities,
+  updateEntity,
   upsertEntity,
   withEntities,
 } from '@ngrx/signals/entities';
@@ -153,6 +154,15 @@ export const OrdersStore = signalStore(
           if (error instanceof HttpErrorResponse && error.status === 404) return null;
           throw error;
         }
+      },
+
+      /**
+       * Atualiza só `pdf_generated_at` na entidade local — evita um GET /orders/{id} inteiro
+       * (reconstruindo client/equipments/items) só pra aprender um timestamp que a resposta de
+       * generatePdf() já trouxe.
+       */
+      markPdfGenerated(id: string, generatedAt: string): void {
+        patchState(store, updateEntity({ id, changes: { pdf_generated_at: generatedAt } }));
       },
 
       /** Ver EquipmentsStore.reset()/ClientsStore.reset(). */

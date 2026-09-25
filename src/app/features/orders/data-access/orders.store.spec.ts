@@ -156,6 +156,21 @@ describe('OrdersStore', () => {
     expect(pdf.url).toBe('https://api.example/signed');
   });
 
+  it('markPdfGenerated() updates only pdf_generated_at on the local entity, without a request', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const loadPromise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ data: [anOrder({ id: 'order-1' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await loadPromise;
+
+    store.markPdfGenerated('order-1', '2026-09-25T12:00:00Z');
+
+    expect(store.entities()[0].pdf_generated_at).toBe('2026-09-25T12:00:00Z');
+    expect(store.entities()[0].number).toBe(1337); // resto da entidade preservado
+  });
+
   it('getPdf() reads /orders/{id}/pdf and returns the signed url', async () => {
     const store = TestBed.inject(OrdersStore);
 
