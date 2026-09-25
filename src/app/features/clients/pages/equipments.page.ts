@@ -60,11 +60,11 @@ export class EquipmentsPage implements OnInit {
   private readonly removeDialog = viewChild.required(ConfirmDialogComponent);
 
   async ngOnInit(): Promise<void> {
-    // Achado do code review de 13/09/2026: findOne() do ClientsStore não tem try/catch próprio
-    // (ao contrário do load() do EquipmentsStore) — sem este try/catch aqui, um cliente
-    // inexistente/erro de rede virava uma promise rejeitada não tratada, deixando a página com
-    // "Catálogo de equipamentos do cliente." genérico e nenhum aviso de erro (ver client()
-    // no template, que só cai no fallback quando o cliente não foi carregado).
+    // findOne() do ClientsStore não tem try/catch próprio (ao contrário do load() do
+    // EquipmentsStore) — sem este try/catch aqui, um cliente inexistente/erro de rede virava uma
+    // promise rejeitada não tratada, deixando a página com "Catálogo de equipamentos do cliente."
+    // genérico e nenhum aviso de erro (ver client() no template, que só cai no fallback quando o
+    // cliente não foi carregado).
     try {
       await Promise.all([this.clientsStore.findOne(this.clientId), this.store.load(this.clientId)]);
     } catch {

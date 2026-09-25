@@ -8,4 +8,8 @@ export const ORDERS_ROUTES: Routes = [
     loadComponent: () => import('./pages/order-form.page').then((m) => m.OrderFormPage),
   },
   { path: 'escanear', loadComponent: () => import('./pages/scan-equipment.page').then((m) => m.ScanEquipmentPage) },
+  // Precisa vir por último: rota com parâmetro genérico captura qualquer segmento, então tem que
+  // ficar depois de todas as rotas literais acima (novo/escanear), senão elas nunca seriam
+  // alcançadas.
+  { path: ':id', loadComponent: () => import('./pages/order-detail.page').then((m) => m.OrderDetailPage) },
 ];

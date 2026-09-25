@@ -22,7 +22,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         auth.clearSession();
-        router.navigateByUrl('/login');
+
+        // router.getCurrentNavigation() só é não-nulo durante uma navegação em andamento — é
+        // exatamente o caso de authGuard rodando restoreSession() com um token expirado/inválido,
+        // e preserva o link original (ex.: QR Code, web#101) pra LoginPage voltar pra lá.
+        const returnUrl = router.getCurrentNavigation()?.extractedUrl.toString();
+        router.navigate(['/login'], returnUrl ? { queryParams: { returnUrl } } : undefined);
       }
       return throwError(() => error);
     }),

@@ -1,0 +1,143 @@
+<div class="flex flex-col gap-4">
+  <a routerLink="/orders" class="w-fit text-sm text-muted-foreground hover:text-foreground">&larr; Voltar</a>
+
+  @if (loading()) {
+    <ui-card>
+      <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground"><ui-spinner /> Carregando...</div>
+    </ui-card>
+  } @else if (errorMessage()) {
+    <ui-card><p class="p-6 text-sm text-destructive">{{ errorMessage() }}</p></ui-card>
+  } @else if (order(); as order) {
+    <div>
+      <h1 class="text-xl font-semibold">OS Nº {{ order.number }}</h1>
+      <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ order.date }}</p>
+    </div>
+
+    <ui-card class="flex max-w-2xl flex-col gap-4 p-4 md:p-6">
+      <div class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Situação</span>
+        @if (order.status) {
+          <span
+            class="inline-flex h-6 w-fit items-center whitespace-nowrap rounded-full px-2.5 text-xs font-medium"
+            [class]="orderStatusBadgeClass(order.status)"
+          >
+            {{ orderStatusLabel(order.status) }}
+          </span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Tipo de atendimento</span>
+        <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+          @for (type of attendanceTypes(); track type.label) {
+            <span
+              class="flex items-center gap-1.5 text-sm"
+              [class.text-muted-foreground]="!type.active"
+            >
+              <span class="h-2 w-2 rounded-full" [class]="type.active ? 'bg-primary' : 'bg-muted-foreground/30'"></span>
+              {{ type.label }}
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Equipamentos</span>
+        <ul class="flex flex-col gap-1.5">
+          @for (equipment of order.equipments; track $index) {
+            <li class="rounded-md border border-input px-3 py-2 text-sm">
+              <span class="font-medium">
+                {{ equipment.name }}
+                @if (equipment.brand) {
+                  · {{ equipment.brand }}
+                }
+                @if (equipment.model) {
+                  · {{ equipment.model }}
+                }
+              </span>
+              @if (equipment.serial_number) {
+                <span class="text-muted-foreground"> · Nº série {{ equipment.serial_number }}</span>
+              }
+              @if (equipment.accessories) {
+                <p class="mt-0.5 text-muted-foreground">Acessórios: {{ equipment.accessories }}</p>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="flex flex-col gap-4 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Diagnóstico</span>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">Defeito apresentado</span>
+          <p class="text-sm text-muted-foreground">{{ order.reported_defect || '—' }}</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">Manutenção a aplicar</span>
+          <p class="text-sm text-muted-foreground">{{ order.maintenance_plan || '—' }}</p>
+        </div>
+        @if (order.notes) {
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium">Observação</span>
+            <p class="text-sm text-muted-foreground">{{ order.notes }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Peças e mão de obra</span>
+        @if (order.items && order.items.length > 0) {
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-muted-foreground">
+                <th class="w-10 py-1 font-medium">Qtd.</th>
+                <th class="py-1 font-medium">Descrição</th>
+                <th class="py-1 text-right font-medium">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of order.items; track $index) {
+                <tr>
+                  <td class="py-1">{{ item.quantity }}</td>
+                  <td class="py-1">{{ item.description }}</td>
+                  <td class="py-1 text-right">
+                    {{ item.unit_price ? (item.unit_price | number: '1.2-2') : '(embutido)' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="text-sm text-muted-foreground">Nenhuma peça lançada.</p>
+        }
+
+        <div class="mt-2 flex items-center justify-between border-t border-border pt-2">
+          <div class="text-sm">
+            <span class="text-muted-foreground">Mão de obra</span>
+            <span class="ml-1 font-medium">R$ {{ (order.labor_cost ?? 0) | number: '1.2-2' }}</span>
+          </div>
+          <div class="text-sm">
+            <span class="text-muted-foreground">Total</span>
+            <span class="ml-1 text-lg font-semibold">R$ {{ (order.total ?? 0) | number: '1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-3">
+        <span class="text-xs font-medium uppercase text-muted-foreground sm:col-span-3">Pagamento e garantia</span>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">Forma de pagamento</span>
+          <p class="text-sm text-muted-foreground">{{ order.payment_method || '—' }}</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">Garantia</span>
+          <p class="text-sm text-muted-foreground">{{ order.warranty_period || '—' }}</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">Validade da proposta</span>
+          <p class="text-sm text-muted-foreground">{{ order.proposal_validity || '—' }}</p>
+        </div>
+      </div>
+    </ui-card>
+  }
+</div>

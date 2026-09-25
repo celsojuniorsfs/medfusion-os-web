@@ -9,13 +9,6 @@ import { authGuard } from './auth.guard';
 
 const TOKEN_KEY = 'medfusion.auth.token';
 
-/**
- * Achado do code review de 13/09/2026: este guard não tinha nenhum teste. Cobre os 3 ramos —
- * já autenticado, sem token nenhum, e token salvo que precisa ser (re)validado via
- * restoreSession() — e trava especificamente o ramo do achado: quando o token salvo é
- * inválido, o guard agora só bloqueia a ativação (`false`), sem construir seu próprio UrlTree
- * por cima do redirecionamento que o authInterceptor já dispara a partir do 401.
- */
 describe('authGuard', () => {
   let injector: Injector;
   let httpMock: HttpTestingController;

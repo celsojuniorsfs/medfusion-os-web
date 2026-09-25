@@ -80,6 +80,89 @@ describe('OrdersStore', () => {
     await expect(promise).rejects.toBeInstanceOf(HttpErrorResponse);
   });
 
+  it('load() populates entities and pagination metadata, filtering only defined params', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.load(2, { client_id: 'client-1', status: 'open' });
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=2&client_id=client-1&status=open`)
+      .flush({
+        data: [anOrder()],
+        meta: { current_page: 2, last_page: 3, per_page: 15, total: 40 },
+      });
+    await promise;
+
+    expect(store.entities()).toHaveLength(1);
+    expect(store.page()).toBe(2);
+    expect(store.lastPage()).toBe(3);
+    expect(store.total()).toBe(40);
+    expect(store.loading()).toBe(false);
+    expect(store.error()).toBeNull();
+  });
+
+  it('load() sets an error message and clears loading on failure', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ message: 'Erro' }, { status: 500, statusText: 'Server Error' });
+    await promise;
+
+    expect(store.loading()).toBe(false);
+    expect(store.error()).toBe('Não foi possível carregar as ordens de serviço.');
+  });
+
+  it('findOne() fetches a single order by id and adds it to entities', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.findOne('order-1');
+    httpMock.expectOne(`${environment.apiUrl}/orders/order-1`).flush({ data: anOrder() });
+
+    const order = await promise;
+
+    expect(order.id).toBe('order-1');
+    expect(store.entities().map((o) => o.id)).toContain('order-1');
+  });
+
+  it('findOne() refreshes an order that was already in the store from an earlier load()', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const loadPromise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ data: [anOrder({ id: 'order-1', number: 1337 })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await loadPromise;
+    expect(store.entities()[0].number).toBe(1337);
+
+    const findOnePromise = store.findOne('order-1');
+    httpMock.expectOne(`${environment.apiUrl}/orders/order-1`).flush({ data: anOrder({ id: 'order-1', number: 9999 }) });
+    await findOnePromise;
+
+    expect(store.entities()).toHaveLength(1);
+    expect(store.entities()[0].number).toBe(9999);
+  });
+
+  it('load() ignores a stale response that arrives after a newer call already resolved', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const firstCall = store.load(1, { status: 'open' });
+    const firstRequest = httpMock.expectOne(`${environment.apiUrl}/orders?page=1&status=open`);
+
+    const secondCall = store.load(1, { status: 'completed' });
+    const secondRequest = httpMock.expectOne(`${environment.apiUrl}/orders?page=1&status=completed`);
+
+    // A segunda chamada responde primeiro...
+    secondRequest.flush({ data: [anOrder({ id: 'order-2' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await secondCall;
+    // ...e só depois a primeira (mais antiga) responde — não pode sobrescrever o resultado da segunda.
+    firstRequest.flush({ data: [anOrder({ id: 'order-1' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await firstCall;
+
+    expect(store.entities().map((o) => o.id)).toEqual(['order-2']);
+    expect(store.filters()).toEqual({ status: 'completed' });
+  });
+
   it('reset() clears entities and error/loading state', async () => {
     const store = TestBed.inject(OrdersStore);
 
@@ -94,7 +177,7 @@ describe('OrdersStore', () => {
     expect(store.loading()).toBe(false);
   });
 
-  /** Ver o mesmo teste nos outros stores — achado do code review de 13/09/2026. */
+  /** Ver o mesmo teste nos outros stores. */
   it('resets itself automatically when the session becomes unauthenticated (logout)', async () => {
     localStorage.setItem(TOKEN_KEY, 'token-valido');
     const auth = TestBed.inject(AuthSessionStore);

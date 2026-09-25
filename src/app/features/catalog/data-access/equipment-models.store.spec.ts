@@ -120,7 +120,7 @@ describe('EquipmentModelsStore', () => {
     expect(store.entities()).toHaveLength(1);
   });
 
-  /** Ver o mesmo teste em accessories/clients/equipments store — achado do code review de 13/09/2026. */
+  /** Ver o mesmo teste em accessories/clients/equipments store. */
   it('resets itself automatically when the session becomes unauthenticated (logout)', async () => {
     localStorage.setItem(TOKEN_KEY, 'token-valido');
     const auth = TestBed.inject(AuthSessionStore);

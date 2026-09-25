@@ -7,6 +7,7 @@ import {
   removeEntity,
   setAllEntities,
   updateEntity,
+  upsertEntity,
   withEntities,
 } from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
@@ -100,12 +101,15 @@ export const ClientsStore = signalStore(
         http.get<{ data: Client }>(`${environment.apiUrl}/clients/${id}`),
       );
 
-      patchState(store, addEntity(response.data));
+      // upsertEntity (não addEntity): addEntity não faz nada se o id já estiver no store, o que
+      // deixaria um dado desatualizado quando o cliente já apareceu antes numa listagem. Mesmo
+      // padrão em EquipmentsStore.findOne/OrdersStore.findOne.
+      patchState(store, upsertEntity(response.data));
 
       return response.data;
     },
 
-    /** Ver EquipmentsStore.reset() — mesmo achado (code review de 13/09/2026), chamado do logout. */
+    /** Ver EquipmentsStore.reset() — chamado do logout. */
     reset(): void {
       patchState(store, removeAllEntities(), {
         loading: false,

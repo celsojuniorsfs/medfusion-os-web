@@ -52,10 +52,8 @@ export class ShellComponent {
   // header. Acima de md continua sempre visível (ver shell.component.html).
   protected readonly sidebarOpen = signal(false);
 
-  // Achado do code review de 13/09/2026: o drawer não tinha Esc pra fechar nem trap de foco —
-  // um usuário de teclado conseguia dar Tab pra fora do drawer aberto e cair no conteúdo atrás
-  // do backdrop. `inert` no <aside> quando fechado no mobile tira os links do drawer da ordem de
-  // tabulação (sem afetar o desktop, onde o drawer não existe como conceito — sempre visível).
+  // `inert` no <aside> quando o drawer está fechado no mobile tira os links da ordem de tabulação
+  // (sem afetar o desktop, onde o drawer não existe como conceito — sempre visível).
   // BreakpointObserver (não CSS puro) porque `inert` é uma propriedade do DOM, não algo que uma
   // media query CSS consiga alternar.
   private readonly isMobile = toSignal(
