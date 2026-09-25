@@ -18,7 +18,7 @@
         <a routerLink="/orders/novo" class="w-fit text-primary hover:underline">Abrir uma OS manualmente</a>
       </div>
     } @else {
-    <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+    <form class="flex flex-col gap-6" [formGroup]="form" (ngSubmit)="submit()">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-1.5">
           <label for="number" class="text-sm font-medium">Número</label>
@@ -96,27 +96,87 @@
             <span class="text-xs text-destructive">Selecione um cliente</span>
           }
         </div>
+      </div>
 
-        <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="equipment-search" class="text-sm font-medium">Equipamento</label>
-          @if (!clientValid()) {
-            <p class="text-xs text-muted-foreground">Selecione um cliente para escolher o equipamento.</p>
-          } @else if (selectedEquipment(); as equipment) {
-            <div class="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2">
-              <span class="flex-1 text-sm">{{ equipment.name }} · {{ equipment.brand }} · {{ equipment.model }}</span>
-              @if (lockedByQr()) {
-                <span class="text-xs text-muted-foreground">Vindo do QR Code</span>
-              } @else {
-                <button
-                  type="button"
-                  (click)="equipmentId.set(null)"
-                  class="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                >
-                  Trocar
-                </button>
+      <fieldset class="flex flex-col gap-2 border-t border-border pt-4">
+        <legend class="text-xs font-medium uppercase text-muted-foreground">Tipo de atendimento</legend>
+        <div class="flex flex-wrap gap-x-6 gap-y-2">
+          <label class="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" formControlName="picked_up" class="h-4 w-4 rounded border-input" />
+            Retirado
+          </label>
+          <label class="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" formControlName="warranty" class="h-4 w-4 rounded border-input" />
+            Garantia
+          </label>
+          <label class="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" formControlName="technical_training" class="h-4 w-4 rounded border-input" />
+            Treinamento técnico
+          </label>
+          <label class="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" formControlName="on_site_quote" class="h-4 w-4 rounded border-input" />
+            Orç. local
+          </label>
+          <label class="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" formControlName="rental" class="h-4 w-4 rounded border-input" />
+            Locação
+          </label>
+        </div>
+        <p class="text-xs text-muted-foreground">Não excludentes — qualquer combinação é válida, inclusive nenhuma.</p>
+      </fieldset>
+
+      <div class="flex flex-col gap-2 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">
+          Equipamentos — sem limite de quantidade
+        </span>
+
+        @if (!clientValid()) {
+          <p class="text-xs text-muted-foreground">Selecione um cliente para escolher o equipamento.</p>
+        } @else {
+          @if (equipmentDrafts().length > 0) {
+            <ul class="flex flex-col gap-1.5">
+              @for (draft of equipmentDrafts(); track $index; let i = $index) {
+                <li class="flex flex-col gap-1.5 rounded-md border border-input px-3 py-2">
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-sm font-medium">
+                      {{ draft.name }}
+                      @if (draft.brand) {
+                        · {{ draft.brand }}
+                      }
+                      @if (draft.model) {
+                        · {{ draft.model }}
+                      }
+                      @if (draft.kind === 'existing' && draft.serial_number) {
+                        <span class="text-muted-foreground">(N/S {{ draft.serial_number }})</span>
+                      }
+                    </span>
+                    @if (!lockedByQr()) {
+                      <button
+                        type="button"
+                        (click)="removeEquipmentDraft(i)"
+                        class="shrink-0 text-xs text-destructive hover:underline"
+                      >
+                        Remover
+                      </button>
+                    }
+                  </div>
+
+                  @if (!lockedByQr()) {
+                    <input
+                      type="text"
+                      [value]="draft.accessories"
+                      (input)="updateExistingEquipmentAccessories(i, $any($event.target).value)"
+                      maxlength="255"
+                      placeholder="Acessórios (opcional)"
+                      class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    />
+                  }
+                </li>
               }
-            </div>
-          } @else {
+            </ul>
+          }
+
+          @if (!lockedByQr()) {
             <div class="relative">
               <input
                 id="equipment-search"
@@ -124,12 +184,11 @@
                 placeholder="Buscar equipamento cadastrado deste cliente..."
                 [value]="equipmentSearch()"
                 (input)="onEquipmentSearchInput($any($event.target).value)"
-                [attr.aria-invalid]="equipmentTouched() && !equipmentValid() ? true : null"
-                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+                class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
               @if (loadingEquipments()) {
                 <p class="mt-1 text-xs text-muted-foreground">Carregando equipamentos...</p>
-              } @else {
+              } @else if (equipmentSearch().trim()) {
                 <div class="absolute z-10 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
                   @for (equipment of filteredEquipments(); track equipment.id) {
                     <button
@@ -150,51 +209,240 @@
                 </div>
               }
             </div>
-          }
-          @if (equipmentTouched() && !equipmentValid()) {
-            <span class="text-xs text-destructive">Selecione um equipamento</span>
-          }
-        </div>
 
-        <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="reported_defect" class="text-sm font-medium">Defeito relatado</label>
+            @if (addingNewEquipment()) {
+              <div class="flex flex-col gap-2 rounded-md border border-dashed border-input p-3" [formGroup]="newEquipmentForm">
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <input
+                    type="text"
+                    formControlName="name"
+                    placeholder="Equipamento"
+                    [attr.aria-invalid]="newEquipmentForm.controls.name.invalid && newEquipmentForm.controls.name.touched ? true : null"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive"
+                  />
+                  <input
+                    type="text"
+                    formControlName="brand"
+                    placeholder="Marca"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                  <input
+                    type="text"
+                    formControlName="model"
+                    placeholder="Modelo"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                  <input
+                    type="text"
+                    formControlName="serial_number"
+                    placeholder="Nº de série (opcional)"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                  <input
+                    type="text"
+                    formControlName="asset_tag"
+                    placeholder="Patrimônio (opcional)"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                  <input
+                    type="text"
+                    formControlName="accessories"
+                    maxlength="255"
+                    placeholder="Acessórios (opcional)"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  Salvo automaticamente no catálogo do cliente para as próximas OS's.
+                </p>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    (click)="confirmNewEquipment()"
+                    class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    Adicionar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="toggleAddNewEquipment()"
+                    class="inline-flex h-9 items-center justify-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <button
+                type="button"
+                (click)="toggleAddNewEquipment()"
+                class="inline-flex h-9 w-fit items-center justify-center rounded-md border border-dashed border-input px-3 text-sm font-medium text-muted-foreground hover:bg-accent"
+              >
+                + Adicionar equipamento novo
+              </button>
+            }
+          }
+        }
+
+        @if (equipmentsTouched() && !equipmentsValid()) {
+          <span class="text-xs text-destructive">Adicione ao menos um equipamento</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-4 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Diagnóstico</span>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="reported_defect" class="text-sm font-medium">Defeito apresentado</label>
           <textarea
             id="reported_defect"
             #reportedDefectInput
             formControlName="reported_defect"
-            rows="3"
+            rows="2"
             class="w-full rounded-md border border-input bg-input-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           ></textarea>
         </div>
 
-        <div class="flex flex-col gap-1.5 md:col-span-2">
-          <label for="accessories" class="text-sm font-medium">Acessórios</label>
-          <input
-            id="accessories"
-            type="text"
-            formControlName="accessories"
-            maxlength="255"
-            placeholder="Ex.: cabo de força, pedal"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          />
+        <div class="flex flex-col gap-1.5">
+          <label for="maintenance_plan" class="text-sm font-medium">Manutenção a aplicar</label>
+          <textarea
+            id="maintenance_plan"
+            formControlName="maintenance_plan"
+            rows="2"
+            class="w-full rounded-md border border-input bg-input-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          ></textarea>
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label for="labor_cost" class="text-sm font-medium">Mão de obra (R$)</label>
+          <label for="notes" class="text-sm font-medium">Observação (opcional)</label>
+          <textarea
+            id="notes"
+            formControlName="notes"
+            rows="2"
+            placeholder="Ex.: Orçamento apenas de peças, mão de obra inclusa no contrato."
+            class="w-full rounded-md border border-input bg-input-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 border-t border-border pt-4">
+        <span class="text-xs font-medium uppercase text-muted-foreground">Peças de reposição e mão de obra</span>
+
+        @if (itemDrafts().length > 0) {
+          <ul class="flex flex-col gap-1.5">
+            @for (item of itemDrafts(); track $index; let i = $index) {
+              <li class="flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-sm">
+                <span class="w-10 shrink-0 text-muted-foreground">{{ item.quantity }}x</span>
+                <span class="flex-1">{{ item.description }}</span>
+                <span class="shrink-0 text-muted-foreground">
+                  {{ item.unit_price ? (item.unit_price | number: '1.2-2') : '—' }}
+                </span>
+                <button type="button" (click)="removeItem(i)" class="shrink-0 text-xs text-destructive hover:underline">
+                  Remover
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="grid grid-cols-[4rem_1fr_8rem] gap-2">
           <input
-            id="labor_cost"
+            type="number"
+            min="1"
+            [value]="newItemQuantity()"
+            (input)="newItemQuantity.set(+$any($event.target).value || 1)"
+            class="h-9 w-full rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+          <input
+            type="text"
+            placeholder="Descrição da peça"
+            [value]="newItemDescription()"
+            (input)="newItemDescription.set($any($event.target).value)"
+            (keydown.enter)="$event.preventDefault(); addItem()"
+            class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+          <input
             type="number"
             step="0.01"
-            formControlName="labor_cost"
-            [attr.aria-invalid]="form.controls.labor_cost.invalid && form.controls.labor_cost.touched ? true : null"
-            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+            placeholder="Valor (opcional)"
+            [value]="newItemUnitPrice()"
+            (input)="newItemUnitPrice.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+            class="h-9 w-full rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
-          <!-- Texto de ajuda fixo: nesta v1 não existe UI de itens/peças, então mão de obra é o
-               único jeito de satisfazer a regra da API ("precisa ter mão de obra ou algum item
-               com preço") — sem isso, um 422 nesse campo confundiria quem estiver preenchendo. -->
-          <span class="text-xs text-muted-foreground">
-            Obrigatório nesta versão — o lançamento de peças chega depois.
-          </span>
+        </div>
+        <button
+          type="button"
+          (click)="addItem()"
+          class="inline-flex h-9 w-fit items-center justify-center rounded-md border border-dashed border-input px-3 text-sm font-medium text-muted-foreground hover:bg-accent"
+        >
+          + Adicionar peça
+        </button>
+        <p class="text-xs text-muted-foreground">
+          Valor da peça é opcional — prefeituras costumam embutir o valor no total de mão de obra.
+        </p>
+
+        <div class="mt-2 grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5">
+            <label for="labor_cost" class="text-sm font-medium">Valor da mão de obra (opcional)</label>
+            <input
+              id="labor_cost"
+              type="number"
+              step="0.01"
+              formControlName="labor_cost"
+              [attr.aria-invalid]="
+                (form.controls.labor_cost.invalid && form.controls.labor_cost.touched) ||
+                (budgetTouched() && !budgetValid())
+                  ? true
+                  : null
+              "
+              class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive/20"
+            />
+            @if (budgetTouched() && !budgetValid()) {
+              <span class="text-xs text-destructive">Informe a mão de obra ou o valor de ao menos uma peça.</span>
+            }
+          </div>
+          <div class="flex flex-col items-end gap-1.5">
+            <span class="text-sm text-muted-foreground">Total (calculado)</span>
+            <span class="text-lg font-semibold">R$ {{ totalPreview() | number: '1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-3">
+        <span class="text-xs font-medium uppercase text-muted-foreground sm:col-span-3">Pagamento e garantia</span>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="payment_method" class="text-sm font-medium">Forma de pagamento</label>
+          <input
+            id="payment_method"
+            type="text"
+            formControlName="payment_method"
+            maxlength="255"
+            placeholder="Ex.: NF 28 dias"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="warranty_period" class="text-sm font-medium">Garantia (prazo)</label>
+          <input
+            id="warranty_period"
+            type="text"
+            formControlName="warranty_period"
+            maxlength="255"
+            placeholder="Ex.: 90 dias"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="proposal_validity" class="text-sm font-medium">Validade da proposta</label>
+          <input
+            id="proposal_validity"
+            type="text"
+            formControlName="proposal_validity"
+            maxlength="255"
+            placeholder="Ex.: 7 dias"
+            class="h-10 w-full rounded-md border border-input bg-input-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
         </div>
       </div>
 
@@ -211,7 +459,7 @@
           @if (loading()) {
             <ui-spinner /> Salvando...
           } @else {
-            Salvar
+            Salvar OS
           }
         </button>
         <a
