@@ -2,6 +2,7 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { AuthSessionStore } from '../auth/auth-session.store';
 import { authInterceptor } from './auth.interceptor';
 
@@ -37,9 +38,9 @@ describe('authInterceptor', () => {
     localStorage.setItem(TOKEN_KEY, 'meu-token');
     TestBed.inject(AuthSessionStore); // constrói o store lendo o token acima
 
-    http.get('/qualquer').subscribe();
+    http.get(`${environment.apiUrl}/qualquer`).subscribe();
 
-    const req = httpMock.expectOne('/qualquer');
+    const req = httpMock.expectOne(`${environment.apiUrl}/qualquer`);
     expect(req.request.headers.get('Authorization')).toBe('Bearer meu-token');
     req.flush({});
   });
@@ -47,11 +48,30 @@ describe('authInterceptor', () => {
   it('does not attach the Authorization header when there is no token', () => {
     TestBed.inject(AuthSessionStore);
 
-    http.get('/qualquer').subscribe();
+    http.get(`${environment.apiUrl}/qualquer`).subscribe();
 
-    const req = httpMock.expectOne('/qualquer');
+    const req = httpMock.expectOne(`${environment.apiUrl}/qualquer`);
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({});
+  });
+
+  it('does not attach the Authorization header on a request to a host outside environment.apiUrl', () => {
+    // Achado numa revisão desta sessão: o formulário de cliente chamava o ViaCEP direto do
+    // navegador, e este interceptor (sem filtro nenhum antes) anexava o Bearer token do técnico
+    // numa requisição a um terceiro. Escopado a environment.apiUrl como defesa contra qualquer
+    // chamada externa futura, mesmo não sobrando nenhuma hoje (ver client-form.page.ts::fillAddressFromCep).
+    localStorage.setItem(TOKEN_KEY, 'meu-token');
+    TestBed.inject(AuthSessionStore);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
+    http.get('https://viacep.com.br/ws/13456789/json/').subscribe({ error: () => {} });
+
+    const req = httpMock.expectOne('https://viacep.com.br/ws/13456789/json/');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({ message: 'Unauthenticated.' }, { status: 401, statusText: 'Unauthorized' });
+
+    // Um 401 vindo de fora não derruba a sessão nem redireciona pro login.
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 
   it('on a 401 response, clears the session and navigates to /login', () => {
@@ -59,10 +79,10 @@ describe('authInterceptor', () => {
     const auth = TestBed.inject(AuthSessionStore);
     const navigateSpy = vi.spyOn(router, 'navigate');
 
-    http.get('/qualquer').subscribe({ error: () => {} });
+    http.get(`${environment.apiUrl}/qualquer`).subscribe({ error: () => {} });
 
     httpMock
-      .expectOne('/qualquer')
+      .expectOne(`${environment.apiUrl}/qualquer`)
       .flush({ message: 'Unauthenticated.' }, { status: 401, statusText: 'Unauthorized' });
 
     expect(auth.token()).toBeNull();
@@ -83,10 +103,10 @@ describe('authInterceptor', () => {
     const intendedUrl = router.parseUrl('/orders/novo/equipamento/eq-1');
     vi.spyOn(router, 'getCurrentNavigation').mockReturnValue({ extractedUrl: intendedUrl } as never);
 
-    http.get('/auth/me').subscribe({ error: () => {} });
+    http.get(`${environment.apiUrl}/auth/me`).subscribe({ error: () => {} });
 
     httpMock
-      .expectOne('/auth/me')
+      .expectOne(`${environment.apiUrl}/auth/me`)
       .flush({ message: 'Unauthenticated.' }, { status: 401, statusText: 'Unauthorized' });
 
     expect(navigateSpy).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/orders/novo/equipamento/eq-1' } });
@@ -99,10 +119,10 @@ describe('authInterceptor', () => {
     const auth = TestBed.inject(AuthSessionStore);
     const navigateSpy = vi.spyOn(router, 'navigate');
 
-    http.post('/qualquer', {}).subscribe({ error: () => {} });
+    http.post(`${environment.apiUrl}/qualquer`, {}).subscribe({ error: () => {} });
 
     httpMock
-      .expectOne('/qualquer')
+      .expectOne(`${environment.apiUrl}/qualquer`)
       .flush({ message: 'The given data was invalid.', errors: {} }, { status: 422, statusText: 'Unprocessable Entity' });
 
     expect(auth.token()).toBe('meu-token');

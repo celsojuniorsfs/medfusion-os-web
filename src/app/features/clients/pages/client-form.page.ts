@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideStethoscope } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
@@ -155,12 +156,14 @@ export class ClientFormPage implements OnInit {
     }
   }
 
-  // web#86: preenche endereço/cidade/UF a partir do CEP (ViaCEP, gratuito, sem autenticação).
+  // web#86: preenche endereço/cidade/UF a partir do CEP, via GET /cep/{cep} — proxy cacheado da
+  // API pro ViaCEP (não chamamos viacep.com.br direto do navegador: o authInterceptor anexaria o
+  // Bearer token do técnico numa requisição a um terceiro, achado numa revisão desta sessão).
   // CEP inválido ou não encontrado (`{ erro: true }`) ou falha de rede não trava o formulário —
   // só não preenche nada, o técnico continua podendo digitar o endereço à mão normalmente.
   private async fillAddressFromCep(cep: string): Promise<void> {
     try {
-      const result = await firstValueFrom(this.http.get<ViaCepAddress>(`https://viacep.com.br/ws/${cep}/json/`));
+      const result = await firstValueFrom(this.http.get<ViaCepAddress>(`${environment.apiUrl}/cep/${cep}`));
 
       if (result.erro) return;
 
