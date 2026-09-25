@@ -143,6 +143,67 @@ describe('OrdersStore', () => {
     expect(store.entities()[0].number).toBe(9999);
   });
 
+  it('generatePdf() posts to /orders/{id}/pdf and returns the signed url', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.generatePdf('order-1');
+    const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pdf`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ url: 'https://api.example/signed', generated_at: '2026-09-25T12:00:00Z', expires_at: '2026-09-25T12:30:00Z' });
+
+    const pdf = await promise;
+
+    expect(pdf.url).toBe('https://api.example/signed');
+  });
+
+  it('markPdfGenerated() updates only pdf_generated_at on the local entity, without a request', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const loadPromise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ data: [anOrder({ id: 'order-1' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await loadPromise;
+
+    store.markPdfGenerated('order-1', '2026-09-25T12:00:00Z');
+
+    expect(store.entities()[0].pdf_generated_at).toBe('2026-09-25T12:00:00Z');
+    expect(store.entities()[0].number).toBe(1337); // resto da entidade preservado
+  });
+
+  it('getPdf() reads /orders/{id}/pdf and returns the signed url', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.getPdf('order-1');
+    const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pdf`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ url: 'https://api.example/signed', generated_at: '2026-09-25T12:00:00Z', expires_at: '2026-09-25T12:30:00Z' });
+
+    expect((await promise)?.url).toBe('https://api.example/signed');
+  });
+
+  it('getPdf() turns a 404 (no pdf generated yet) into null instead of throwing', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.getPdf('order-1');
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders/order-1/pdf`)
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+
+    expect(await promise).toBeNull();
+  });
+
+  it('getPdf() propagates an error that is not a 404', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.getPdf('order-1');
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders/order-1/pdf`)
+      .flush({ message: 'Server error' }, { status: 500, statusText: 'Server Error' });
+
+    await expect(promise).rejects.toBeInstanceOf(HttpErrorResponse);
+  });
+
   it('load() ignores a stale response that arrives after a newer call already resolved', async () => {
     const store = TestBed.inject(OrdersStore);
 

@@ -1,10 +1,11 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { effect, inject } from '@angular/core';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
 import {
   addEntity,
   removeAllEntities,
   setAllEntities,
+  updateEntity,
   upsertEntity,
   withEntities,
 } from '@ngrx/signals/entities';
@@ -16,6 +17,7 @@ import { AuthSessionStore } from '../../../core/auth/auth-session.store';
 type Order = components['schemas']['Order'] & { id: string };
 type OrderInput = components['schemas']['OrderInput'];
 type OrderStatus = components['schemas']['OrderStatus'];
+type OrderPdf = components['schemas']['OrderPdf'];
 type Pagination = components['schemas']['Pagination'];
 
 export interface OrdersFilters {
@@ -133,6 +135,34 @@ export const OrdersStore = signalStore(
         patchState(store, upsertEntity(response.data));
 
         return response.data;
+      },
+
+      /**
+       * POST /orders/{id}/pdf — gera um arquivo novo a cada chamada (a API guarda todos, nunca
+       * sobrescreve). Não mexe em `entities()`: só o botão de download em order-detail.page usa
+       * isto, a listagem/detalhe não precisam saber da URL assinada.
+       */
+      async generatePdf(id: string): Promise<OrderPdf> {
+        return firstValueFrom(http.post<OrderPdf>(`${environment.apiUrl}/orders/${id}/pdf`, {}));
+      },
+
+      /** GET /orders/{id}/pdf — 404 (nenhum PDF gerado ainda) vira `null`, não uma exceção. */
+      async getPdf(id: string): Promise<OrderPdf | null> {
+        try {
+          return await firstValueFrom(http.get<OrderPdf>(`${environment.apiUrl}/orders/${id}/pdf`));
+        } catch (error) {
+          if (error instanceof HttpErrorResponse && error.status === 404) return null;
+          throw error;
+        }
+      },
+
+      /**
+       * Atualiza só `pdf_generated_at` na entidade local — evita um GET /orders/{id} inteiro
+       * (reconstruindo client/equipments/items) só pra aprender um timestamp que a resposta de
+       * generatePdf() já trouxe.
+       */
+      markPdfGenerated(id: string, generatedAt: string): void {
+        patchState(store, updateEntity({ id, changes: { pdf_generated_at: generatedAt } }));
       },
 
       /** Ver EquipmentsStore.reset()/ClientsStore.reset(). */
