@@ -26,10 +26,10 @@
       <div
         class="flex w-[40mm] items-center gap-2 border border-dashed border-border p-1 print:border-none print:p-0"
       >
-        <div class="h-[26mm] w-[26mm] shrink-0 [&>svg]:block [&>svg]:h-full [&>svg]:w-full" [innerHTML]="qrCodeSvg()">
+        <div class="h-[20mm] w-[20mm] shrink-0 [&>svg]:block [&>svg]:h-full [&>svg]:w-full" [innerHTML]="qrCodeSvg()">
         </div>
         <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[7pt] leading-tight font-medium">
-          {{ client()?.name }}
+          {{ labelName() }}
         </span>
       </div>
 
