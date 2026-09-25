@@ -11,3 +11,16 @@ export function todayLocalDate(): string {
 
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Rearranja a string "AAAA-MM-DD" pra "DD/MM/AAAA" sem passar por `Date` — evitar o mesmo
+ * problema de fuso de `todayLocalDate()` acima (um `new Date('AAAA-MM-DD')` é interpretado como
+ * UTC, e formatar de volta no fuso local pode exibir o dia anterior).
+ */
+export function formatDateBr(isoDate: string | null | undefined): string {
+  if (!isoDate) return '';
+
+  const [year, month, day] = isoDate.split('-');
+
+  return `${day}/${month}/${year}`;
+}

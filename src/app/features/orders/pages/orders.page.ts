@@ -11,6 +11,7 @@ import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
+import { formatDateBr } from '../data-access/local-date';
 import { ORDER_STATUSES, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
@@ -42,6 +43,7 @@ export class OrdersPage implements OnInit, OnDestroy {
   protected readonly clientsStore = inject(ClientsStore);
   protected readonly orderStatusLabel = orderStatusLabel;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
+  protected readonly formatDateBr = formatDateBr;
   protected readonly statuses = ORDER_STATUSES;
 
   protected readonly clientFilterSearch = signal('');

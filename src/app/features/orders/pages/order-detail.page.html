@@ -10,7 +10,7 @@
   } @else if (order(); as order) {
     <div>
       <h1 class="text-xl font-semibold">OS Nº {{ order.number }}</h1>
-      <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ order.date }}</p>
+      <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ formatDateBr(order.date) }}</p>
     </div>
 
     <ui-card class="flex max-w-2xl flex-col gap-4 p-4 md:p-6">
