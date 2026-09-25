@@ -1,5 +1,7 @@
+import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -14,19 +16,51 @@ type OrderInput = components['schemas']['OrderInput'];
 type Client = components['schemas']['Client'] & { id: string };
 type Equipment = components['schemas']['Equipment'] & { id: string; client_id: string };
 
+/** Uma linha "do catálogo do cliente" na lista de equipamentos da OS — vira `{ equipment_id, accessories }`. */
+interface ExistingEquipmentDraft {
+  kind: 'existing';
+  equipment_id: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  serial_number: string | null;
+  accessories: string;
+}
+
+/** Uma linha "novo equipamento" — a API cadastra no catálogo do cliente na mesma chamada. */
+interface NewEquipmentDraft {
+  kind: 'new';
+  name: string;
+  brand: string;
+  model: string;
+  serial_number: string;
+  asset_tag: string;
+  accessories: string;
+}
+
+type EquipmentDraft = ExistingEquipmentDraft | NewEquipmentDraft;
+
+interface ItemDraft {
+  quantity: number;
+  description: string;
+  unit_price: number | null;
+}
+
 /**
- * Versão mínima da Nova OS (v1 do recurso de reconhecimento de equipamento por QR Code, ver
- * web#100): número sugerido, data, cliente + equipamento, defeito relatado, acessórios (texto
- * livre — snapshot desta OS, não o catálogo estruturado) e mão de obra. Sem os 5 booleanos, sem
- * múltiplos itens, sem forma de pagamento — ficam pra uma etapa seguinte.
+ * Nova Ordem de Serviço (web#37/#38/#39 — completa a versão mínima do web#100 com múltiplos
+ * equipamentos, peças de reposição/mão de obra e os campos restantes: tipo de atendimento,
+ * diagnóstico completo, pagamento e garantia). Conteúdo/copy seguem o mockup de referência em
+ * `Telas da Ordem de Serviço.pdf`.
  *
- * Cliente e equipamento ficam FORA do form reativo de propósito, mesmo padrão de
- * equipment-form.page.ts pro seletor de modelo: são um autocomplete com busca, não um valor
- * único que Validators.required resolveria sozinho.
+ * Cliente e listas de equipamento/peças ficam FORA do form reativo de propósito, mesmo padrão de
+ * `equipment-form.page.ts` pra acessórios: são listas dinâmicas com busca/adicionar/remover, não
+ * um valor único que `Validators.required` resolveria sozinho — e não existe `FormArray` em
+ * nenhum outro lugar deste repositório, então segue-se o precedente de signal-array já
+ * estabelecido em vez de introduzir um padrão novo.
  */
 @Component({
   selector: 'app-order-form-page',
-  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent],
+  imports: [ReactiveFormsModule, RouterLink, CardComponent, SpinnerComponent, DecimalPipe],
   templateUrl: './order-form.page.html',
 })
 export class OrderFormPage implements OnInit, OnDestroy {
@@ -41,8 +75,8 @@ export class OrderFormPage implements OnInit, OnDestroy {
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
 
-  // Preenchimento via QR Code (web#101): cliente e equipamento chegam travados, sobrando só
-  // defeito/acessórios/mão de obra. `qrEquipmentNotFound` cobre a etiqueta antiga apontando pra um
+  // Preenchimento via QR Code (web#101): cliente e equipamento chegam travados, sobrando só o
+  // resto do formulário. `qrEquipmentNotFound` cobre a etiqueta antiga apontando pra um
   // equipamento já removido do cadastro.
   protected readonly lockedByQr = signal(false);
   protected readonly qrEquipmentNotFound = signal(false);
@@ -54,49 +88,92 @@ export class OrderFormPage implements OnInit, OnDestroy {
   private clientSearchTimeout?: ReturnType<typeof setTimeout>;
 
   protected readonly equipmentSearch = signal('');
-  protected readonly equipmentId = signal<string | null>(null);
-  protected readonly equipmentTouched = signal(false);
   protected readonly loadingEquipments = signal(false);
+  protected readonly equipmentDrafts = signal<EquipmentDraft[]>([]);
+  protected readonly equipmentsTouched = signal(false);
+  protected readonly addingNewEquipment = signal(false);
 
   protected readonly selectedClient = computed<Client | undefined>(() => {
     const id = this.clientId();
     return id ? this.clientsStore.entities().find((client) => client.id === id) : undefined;
   });
 
-  protected readonly selectedEquipment = computed<Equipment | undefined>(() => {
-    const id = this.equipmentId();
-    return id ? this.equipmentsStore.entities().find((equipment) => equipment.id === id) : undefined;
-  });
-
   protected readonly clientValid = computed(() => this.clientId() !== null);
-  protected readonly equipmentValid = computed(() => this.equipmentId() !== null);
+  protected readonly equipmentsValid = computed(() => this.equipmentDrafts().length > 0);
 
   // Filtro client-side, mesmo raciocínio de equipmentMatchesSearch (features/clients/data-access/
   // equipments.ts) — não importado de lá de propósito: entre features só o *store* é importável
-  // (ver README), o resto do data-access de outra feature não é superfície pública.
+  // (ver README). Exclui equipamentos já adicionados à OS, pra não deixar adicionar duplicado.
   protected readonly filteredEquipments = computed(() => {
     const term = this.equipmentSearch().trim().toLowerCase();
-    const all = this.equipmentsStore.entities();
-    if (!term) return all;
+    const addedIds = new Set(
+      this.equipmentDrafts()
+        .filter((draft): draft is ExistingEquipmentDraft => draft.kind === 'existing')
+        .map((draft) => draft.equipment_id),
+    );
+    const available = this.equipmentsStore.entities().filter((equipment) => !addedIds.has(equipment.id));
+    if (!term) return available;
 
-    return all.filter((equipment) =>
+    return available.filter((equipment) =>
       [equipment.name, equipment.brand, equipment.model, equipment.serial_number].some((field) =>
         field?.toLowerCase().includes(term),
       ),
     );
   });
 
+  protected readonly newEquipmentForm = this.fb.nonNullable.group({
+    name: ['', Validators.required],
+    brand: [''],
+    model: [''],
+    serial_number: [''],
+    asset_tag: [''],
+    accessories: ['', Validators.maxLength(255)],
+  });
+
+  protected readonly itemDrafts = signal<ItemDraft[]>([]);
+  protected readonly newItemQuantity = signal(1);
+  protected readonly newItemDescription = signal('');
+  protected readonly newItemUnitPrice = signal<number | null>(null);
+
   protected readonly form = this.fb.nonNullable.group({
     number: [1, [Validators.required, Validators.min(1)]],
     date: [new Date().toISOString().slice(0, 10), Validators.required],
+    picked_up: [false],
+    warranty: [false],
+    technical_training: [false],
+    on_site_quote: [false],
+    rental: [false],
     reported_defect: [''],
-    accessories: ['', Validators.maxLength(255)],
-    labor_cost: [null as number | null, [Validators.required, Validators.min(0.01)]],
+    maintenance_plan: [''],
+    notes: [''],
+    payment_method: ['', Validators.maxLength(255)],
+    warranty_period: ['', Validators.maxLength(255)],
+    proposal_validity: ['', Validators.maxLength(255)],
+    labor_cost: [null as number | null, Validators.min(0.01)],
+  });
+
+  // Precisa de signal (não só ler form.controls.labor_cost.value) pra "Total (calculado)"
+  // reagir em tempo real — um computed só re-executa quando um signal que ele lê muda.
+  private readonly laborCost = toSignal(this.form.controls.labor_cost.valueChanges, {
+    initialValue: this.form.controls.labor_cost.value,
+  });
+
+  protected readonly itemsTotal = computed(() =>
+    this.itemDrafts().reduce((sum, item) => sum + (item.unit_price ?? 0) * item.quantity, 0),
+  );
+  protected readonly totalPreview = computed(() => this.itemsTotal() + (this.laborCost() ?? 0));
+
+  // Regra da API (ver OrderRequest): precisa de mão de obra OU ao menos uma peça com preço.
+  // Replicada aqui pra dar feedback antes de um 422 do servidor.
+  protected readonly budgetTouched = signal(false);
+  protected readonly budgetValid = computed(() => {
+    if ((this.laborCost() ?? 0) > 0) return true;
+    return this.itemDrafts().some((item) => (item.unit_price ?? 0) > 0);
   });
 
   constructor() {
     // Critério de pronto da web#101: ao entrar pelo QR Code, o cursor já cai no campo de defeito
-    // (cliente/equipamento já vêm resolvidos, então é o único campo que sobra preencher).
+    // (cliente/equipamento já vêm resolvidos, então é o campo que sobra preencher primeiro).
     effect(() => {
       if (!this.initialLoading() && this.lockedByQr()) {
         this.reportedDefectInput()?.nativeElement.focus();
@@ -130,8 +207,18 @@ export class OrderFormPage implements OnInit, OnDestroy {
       this.lockedByQr.set(true);
       this.clientId.set(client.id);
       this.clientTouched.set(true);
-      this.equipmentId.set(equipment.id);
-      this.equipmentTouched.set(true);
+      this.equipmentDrafts.set([
+        {
+          kind: 'existing',
+          equipment_id: equipment.id,
+          name: equipment.name ?? '',
+          brand: equipment.brand ?? null,
+          model: equipment.model ?? null,
+          serial_number: equipment.serial_number ?? null,
+          accessories: '',
+        },
+      ]);
+      this.equipmentsTouched.set(true);
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 404) {
         this.qrEquipmentNotFound.set(true);
@@ -156,8 +243,8 @@ export class OrderFormPage implements OnInit, OnDestroy {
     this.clientId.set(client.id);
     this.clientSearch.set('');
 
-    // Trocar de cliente invalida o equipamento escolhido antes (era de outro catálogo).
-    this.equipmentId.set(null);
+    // Trocar de cliente invalida os equipamentos escolhidos antes (eram de outro catálogo).
+    this.equipmentDrafts.set([]);
     this.equipmentSearch.set('');
 
     this.loadingEquipments.set(true);
@@ -170,7 +257,7 @@ export class OrderFormPage implements OnInit, OnDestroy {
 
   changeClient(): void {
     this.clientId.set(null);
-    this.equipmentId.set(null);
+    this.equipmentDrafts.set([]);
   }
 
   onEquipmentSearchInput(value: string): void {
@@ -178,9 +265,65 @@ export class OrderFormPage implements OnInit, OnDestroy {
   }
 
   selectEquipment(equipment: Equipment): void {
-    this.equipmentTouched.set(true);
-    this.equipmentId.set(equipment.id);
+    this.equipmentsTouched.set(true);
+    this.equipmentDrafts.update((current) => [
+      ...current,
+      {
+        kind: 'existing',
+        equipment_id: equipment.id,
+        name: equipment.name ?? '',
+        brand: equipment.brand ?? null,
+        model: equipment.model ?? null,
+        serial_number: equipment.serial_number ?? null,
+        accessories: '',
+      },
+    ]);
     this.equipmentSearch.set('');
+  }
+
+  updateExistingEquipmentAccessories(index: number, value: string): void {
+    this.equipmentDrafts.update((current) =>
+      current.map((draft, i) => (i === index && draft.kind === 'existing' ? { ...draft, accessories: value } : draft)),
+    );
+  }
+
+  removeEquipmentDraft(index: number): void {
+    this.equipmentsTouched.set(true);
+    this.equipmentDrafts.update((current) => current.filter((_, i) => i !== index));
+  }
+
+  toggleAddNewEquipment(): void {
+    this.addingNewEquipment.update((current) => !current);
+  }
+
+  confirmNewEquipment(): void {
+    if (this.newEquipmentForm.invalid) {
+      this.newEquipmentForm.markAllAsTouched();
+      return;
+    }
+
+    this.equipmentsTouched.set(true);
+    const raw = this.newEquipmentForm.getRawValue();
+    this.equipmentDrafts.update((current) => [...current, { kind: 'new', ...raw }]);
+    this.newEquipmentForm.reset({ name: '', brand: '', model: '', serial_number: '', asset_tag: '', accessories: '' });
+    this.addingNewEquipment.set(false);
+  }
+
+  addItem(): void {
+    const description = this.newItemDescription().trim();
+    if (!description) return;
+
+    this.itemDrafts.update((current) => [
+      ...current,
+      { quantity: this.newItemQuantity(), description, unit_price: this.newItemUnitPrice() },
+    ]);
+    this.newItemQuantity.set(1);
+    this.newItemDescription.set('');
+    this.newItemUnitPrice.set(null);
+  }
+
+  removeItem(index: number): void {
+    this.itemDrafts.update((current) => current.filter((_, i) => i !== index));
   }
 
   serverErrorMessage(field: string): string | null {
@@ -191,8 +334,9 @@ export class OrderFormPage implements OnInit, OnDestroy {
     if (this.loading()) return;
 
     this.clientTouched.set(true);
-    this.equipmentTouched.set(true);
-    if (this.form.invalid || !this.clientValid() || !this.equipmentValid()) {
+    this.equipmentsTouched.set(true);
+    this.budgetTouched.set(true);
+    if (this.form.invalid || !this.clientValid() || !this.equipmentsValid() || !this.budgetValid()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -201,19 +345,42 @@ export class OrderFormPage implements OnInit, OnDestroy {
     this.errorMessage.set(null);
 
     const raw = this.form.getRawValue();
+    const equipments: OrderInput['equipments'] = this.equipmentDrafts().map((draft) =>
+      draft.kind === 'existing'
+        ? { equipment_id: draft.equipment_id, accessories: draft.accessories.trim() || null }
+        : {
+            name: draft.name,
+            brand: draft.brand.trim() || null,
+            model: draft.model.trim() || null,
+            serial_number: draft.serial_number.trim() || null,
+            asset_tag: draft.asset_tag.trim() || null,
+            accessories: draft.accessories.trim() || null,
+          },
+    );
+    const items: OrderInput['items'] = this.itemDrafts().map((item) => ({
+      quantity: item.quantity,
+      description: item.description,
+      unit_price: item.unit_price,
+    }));
+
     const input: OrderInput = {
       number: raw.number,
       date: raw.date,
       client_id: this.clientId()!,
-      picked_up: false,
-      warranty: false,
-      technical_training: false,
-      on_site_quote: false,
-      rental: false,
+      picked_up: raw.picked_up,
+      warranty: raw.warranty,
+      technical_training: raw.technical_training,
+      on_site_quote: raw.on_site_quote,
+      rental: raw.rental,
       reported_defect: raw.reported_defect || null,
+      maintenance_plan: raw.maintenance_plan || null,
+      notes: raw.notes || null,
+      payment_method: raw.payment_method || null,
+      warranty_period: raw.warranty_period || null,
+      proposal_validity: raw.proposal_validity || null,
       labor_cost: raw.labor_cost,
-      equipments: [{ equipment_id: this.equipmentId()!, accessories: raw.accessories || null }],
-      items: [],
+      equipments,
+      items,
     };
 
     try {
