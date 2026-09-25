@@ -7,6 +7,7 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../data-access/clients.store';
 import { EquipmentsStore } from '../data-access/equipments.store';
+import { abbreviateClientLabelName } from '../data-access/label-name';
 
 /**
  * Etiqueta pra colar no equipamento (web#102): QR Code + nome do cliente, pensada pra impressora
@@ -16,9 +17,9 @@ import { EquipmentsStore } from '../data-access/equipments.store';
  * quando a impressão térmica não aguenta a limpeza com álcool (ver decisões validadas na issue),
  * então a densidade extra de Q/H não compensa.
  *
- * Nome do cliente "abreviado" (pedido do cliente) é tratado aqui como "cabe no espaço da
- * etiqueta": trunca com reticências via CSS em vez de tentar adivinhar algoritmicamente qual parte
- * de um nome de pessoa ou razão social cortar — não tem regra que funcione igual pros dois casos.
+ * Nome do cliente "abreviado" (pedido do cliente) usa `abbreviateClientLabelName` (ver
+ * data-access/label-name.ts) pra decidir o texto, e o CSS de reticências no template continua só
+ * como rede de segurança pro caso raro desse texto ainda não caber nos ~20mm ao lado do QR.
  */
 @Component({
   selector: 'app-equipment-qr-code-page',
@@ -40,6 +41,11 @@ export class EquipmentQrCodePage implements OnInit, OnDestroy {
   protected readonly client = computed(() =>
     this.clientsStore.entities().find((client) => client.id === this.clientId),
   );
+
+  protected readonly labelName = computed(() => {
+    const client = this.client();
+    return client ? abbreviateClientLabelName(client) : '';
+  });
 
   protected readonly qrCodeUrl = computed(() => `${location.origin}/os/${this.equipmentId}`);
 
