@@ -13,7 +13,7 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../data-access/clients.store';
-import { equipmentMatchesSearch } from '../data-access/equipments';
+import { equipmentMatchesSearch, formatAccessories } from '../data-access/equipments';
 import { EquipmentsStore } from '../data-access/equipments.store';
 
 /**
@@ -49,6 +49,7 @@ export class EquipmentsPage implements OnInit {
   protected readonly pendingRemoval = signal<{ id: string; name: string } | null>(null);
   protected readonly removing = signal(false);
   protected readonly pageError = signal<string | null>(null);
+  protected readonly formatAccessories = formatAccessories;
 
   protected readonly filteredEquipments = computed(() =>
     this.store.entities().filter((equipment) => equipmentMatchesSearch(equipment, this.searchInput())),
