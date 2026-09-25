@@ -8,9 +8,36 @@
   } @else if (errorMessage()) {
     <ui-card><p class="p-6 text-sm text-destructive">{{ errorMessage() }}</p></ui-card>
   } @else if (order(); as order) {
-    <div>
-      <h1 class="text-xl font-semibold">OS Nº {{ order.number }}</h1>
-      <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ formatDateBr(order.date) }}</p>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h1 class="text-xl font-semibold">OS Nº {{ order.number }}</h1>
+        <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ formatDateBr(order.date) }}</p>
+      </div>
+
+      <div class="flex flex-col items-start gap-1.5">
+        <button
+          type="button"
+          [disabled]="pdfBusy()"
+          (click)="downloadPdf()"
+          class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        >
+          @if (pdfBusy()) {
+            <ui-spinner /> Gerando PDF...
+          } @else {
+            Baixar PDF
+          }
+        </button>
+        @if (order.pdf_generated_at) {
+          <button
+            type="button"
+            [disabled]="pdfBusy()"
+            (click)="regeneratePdf()"
+            class="text-xs text-muted-foreground underline hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
+            Gerar novamente
+          </button>
+        }
+      </div>
     </div>
 
     <ui-card class="flex max-w-2xl flex-col gap-4 p-4 md:p-6">
