@@ -46,3 +46,20 @@ export function orderStatusLabel(status: OrderStatus): string {
 export function orderStatusBadgeClass(status: OrderStatus): string {
   return BADGE_CLASSES[status];
 }
+
+// Espelha OrderStatus::allowedNextStatuses() (api) — só os status de onde "cancelar" é uma
+// transição válida. Se a API mudar essas regras, este é o único lugar a atualizar no web.
+const CANCELABLE_STATUSES: OrderStatus[] = ['open', 'in_analysis', 'external_quote', 'awaiting_approval'];
+
+// Espelha OrderService::assertIsEditable() (api) — `completed` entra aqui mesmo não sendo
+// tecnicamente terminal no grafo de transições (pode ir pra `warranty_repair`): editar
+// equipamentos/peças de uma OS já concluída não faz sentido operacional.
+const UNEDITABLE_STATUSES: OrderStatus[] = ['canceled', 'completed', 'not_approved'];
+
+export function isOrderCancelable(status: OrderStatus): boolean {
+  return CANCELABLE_STATUSES.includes(status);
+}
+
+export function isOrderEditable(status: OrderStatus): boolean {
+  return !UNEDITABLE_STATUSES.includes(status);
+}

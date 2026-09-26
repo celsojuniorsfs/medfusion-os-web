@@ -1,23 +1,26 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { formatDateBr } from '../data-access/local-date';
-import { orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
+import { isOrderCancelable, isOrderEditable, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
 /**
- * Visualização de uma OS (web#41), somente leitura — conteúdo/copy seguem o mockup de referência
- * (`Telas da Ordem de Serviço.pdf`). Sem o texto de "reaberta em..." do mockup (descreve um
- * histórico que não existe no modelo de dados hoje), sem link "Ver histórico do equipamento"
- * (aponta pra tela do web#58, fora de escopo) e sem botão "Editar" (não é nenhuma das issues
- * escolhidas).
+ * Visualização de uma OS (web#41). Conteúdo/copy seguem o mockup de referência (`Telas da Ordem
+ * de Serviço.pdf`). Sem o texto de "reaberta em..." do mockup (descreve um histórico que não
+ * existe no modelo de dados hoje) e sem link "Ver histórico do equipamento" (aponta pra tela do
+ * web#58, fora de escopo).
+ *
+ * Botões de Editar/Cancelar seguem o mesmo par requestCancel/confirmCancel de `orders.page.ts` —
+ * ver o comentário lá pra por que "cancelar" é a única forma de "desativar" uma OS.
  */
 @Component({
   selector: 'app-order-detail-page',
-  imports: [RouterLink, CardComponent, SpinnerComponent, DecimalPipe],
+  imports: [RouterLink, CardComponent, ConfirmDialogComponent, SpinnerComponent, DecimalPipe],
   templateUrl: './order-detail.page.html',
 })
 export class OrderDetailPage implements OnInit {
@@ -28,9 +31,13 @@ export class OrderDetailPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly pdfBusy = signal(false);
+  protected readonly canceling = signal(false);
+  private readonly cancelDialog = viewChild.required(ConfirmDialogComponent);
 
   protected readonly orderStatusLabel = orderStatusLabel;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
+  protected readonly isOrderEditable = isOrderEditable;
+  protected readonly isOrderCancelable = isOrderCancelable;
   protected readonly formatDateBr = formatDateBr;
 
   protected readonly order = computed(() => this.store.entities().find((order) => order.id === this.orderId));
@@ -57,6 +64,31 @@ export class OrderDetailPage implements OnInit {
       this.errorMessage.set('Não foi possível carregar esta ordem de serviço.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  requestCancel(): void {
+    this.cancelDialog().open();
+  }
+
+  async confirmCancel(): Promise<void> {
+    const order = this.order();
+    if (!order) return;
+
+    this.canceling.set(true);
+    try {
+      // upsertEntity (dentro de changeStatus) já atualiza o badge/os botões desta própria tela —
+      // sem precisar de um findOne() extra pra recarregar.
+      await this.store.changeStatus(order.id, 'canceled');
+      this.cancelDialog().close();
+      toast.success('Ordem de serviço cancelada.');
+    } catch {
+      // Fecha o diálogo antes do toast — senão o backdrop dele fica por cima da mensagem de erro
+      // (ver o mesmo comentário em clients.page.ts::confirmRemove).
+      this.cancelDialog().close();
+      toast.error('Não foi possível cancelar a OS. Tente novamente.');
+    } finally {
+      this.canceling.set(false);
     }
   }
 
