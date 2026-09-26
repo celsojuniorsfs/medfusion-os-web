@@ -16,27 +16,38 @@ import { OrdersStore } from '../data-access/orders.store';
 type OrderInput = components['schemas']['OrderInput'];
 type Client = components['schemas']['Client'] & { id: string };
 type Equipment = components['schemas']['Equipment'] & { id: string; client_id: string };
+type OrderEquipmentAccessory = components['schemas']['OrderEquipmentAccessory'];
+
+/** Campos comuns a qualquer rascunho de equipamento: os acessórios já adicionados e a linha de
+ * entrada ainda não confirmada (nome/quantidade digitados, esperando o "+ Adicionar"). Ficam no
+ * PRÓPRIO draft, não num array paralelo indexado por posição — `removeEquipmentDraft(i)` desloca
+ * índices, e um estado paralelo separado ficaria associado ao equipamento errado depois disso. */
+interface AccessoryEditorState {
+  accessories: OrderEquipmentAccessory[];
+  newAccessoryName: string;
+  newAccessoryQuantity: number;
+}
+
+const EMPTY_ACCESSORY_EDITOR: AccessoryEditorState = { accessories: [], newAccessoryName: '', newAccessoryQuantity: 1 };
 
 /** Uma linha "do catálogo do cliente" na lista de equipamentos da OS — vira `{ equipment_id, accessories }`. */
-interface ExistingEquipmentDraft {
+interface ExistingEquipmentDraft extends AccessoryEditorState {
   kind: 'existing';
   equipment_id: string;
   name: string;
   brand: string | null;
   model: string | null;
   serial_number: string | null;
-  accessories: string;
 }
 
 /** Uma linha "novo equipamento" — a API cadastra no catálogo do cliente na mesma chamada. */
-interface NewEquipmentDraft {
+interface NewEquipmentDraft extends AccessoryEditorState {
   kind: 'new';
   name: string;
   brand: string;
   model: string;
   serial_number: string;
   asset_tag: string;
-  accessories: string;
 }
 
 type EquipmentDraft = ExistingEquipmentDraft | NewEquipmentDraft;
@@ -47,7 +58,12 @@ interface ItemDraft {
   unit_price: number | null;
 }
 
-/** Usado tanto pra travar o equipamento vindo do QR Code quanto pra escolher um da busca. */
+/**
+ * Usado tanto pra travar o equipamento vindo do QR Code quanto pra escolher um da busca. A lista
+ * de acessórios começa PRÉ-PREENCHIDA com os acessórios estruturados do catálogo do equipamento
+ * (nome + quantidade, sem accessory_id — a OS não referencia o catálogo, é só ponto de partida) —
+ * o técnico ajusta/remove livremente a partir daí.
+ */
 function toExistingDraft(equipment: Equipment): ExistingEquipmentDraft {
   return {
     kind: 'existing',
@@ -56,7 +72,11 @@ function toExistingDraft(equipment: Equipment): ExistingEquipmentDraft {
     brand: equipment.brand ?? null,
     model: equipment.model ?? null,
     serial_number: equipment.serial_number ?? null,
-    accessories: '',
+    ...EMPTY_ACCESSORY_EDITOR,
+    accessories: (equipment.accessories ?? []).map((accessory) => ({
+      name: accessory.name ?? '',
+      quantity: accessory.quantity ?? 1,
+    })),
   };
 }
 
@@ -66,11 +86,15 @@ function toExistingDraft(equipment: Equipment): ExistingEquipmentDraft {
  * diagnóstico completo, pagamento e garantia). Conteúdo/copy seguem o mockup de referência em
  * `Telas da Ordem de Serviço.pdf`.
  *
- * Cliente e listas de equipamento/peças ficam FORA do form reativo de propósito, mesmo padrão de
- * `equipment-form.page.ts` pra acessórios: são listas dinâmicas com busca/adicionar/remover, não
- * um valor único que `Validators.required` resolveria sozinho — e não existe `FormArray` em
- * nenhum outro lugar deste repositório, então segue-se o precedente de signal-array já
- * estabelecido em vez de introduzir um padrão novo.
+ * Cliente e listas de equipamento/peças/acessórios ficam FORA do form reativo de propósito: são
+ * listas dinâmicas com adicionar/remover, não um valor único que `Validators.required` resolveria
+ * sozinho — e não existe `FormArray` em nenhum outro lugar deste repositório, então segue-se o
+ * precedente de signal-array já estabelecido (`itemDrafts`) em vez de introduzir um padrão novo.
+ * Os acessórios de cada equipamento (nome + quantidade, `AccessoryEditorState`) vivem DENTRO do
+ * próprio draft daquele equipamento, não no editor de busca-no-catálogo de
+ * `equipment-form.page.ts`: ali o acessório referencia o catálogo global (`accessory_id`); aqui é
+ * texto livre digitado pra esta OS, sem vínculo nenhum com o catálogo (mesma decisão de sempre ter
+ * sido um snapshot, só que agora uma lista em vez de uma string).
  */
 @Component({
   selector: 'app-order-form-page',
@@ -141,7 +165,6 @@ export class OrderFormPage implements OnInit, OnDestroy {
     model: [''],
     serial_number: [''],
     asset_tag: [''],
-    accessories: ['', Validators.maxLength(255)],
   });
 
   protected readonly itemDrafts = signal<ItemDraft[]>([]);
@@ -278,10 +301,30 @@ export class OrderFormPage implements OnInit, OnDestroy {
     this.equipmentSearch.set('');
   }
 
-  updateExistingEquipmentAccessories(index: number, value: string): void {
-    this.equipmentDrafts.update((current) =>
-      current.map((draft, i) => (i === index && draft.kind === 'existing' ? { ...draft, accessories: value } : draft)),
-    );
+  private updateDraft(index: number, fn: (draft: EquipmentDraft) => EquipmentDraft): void {
+    this.equipmentDrafts.update((current) => current.map((draft, i) => (i === index ? fn(draft) : draft)));
+  }
+
+  updateAccessoryEntry(index: number, patch: Partial<Pick<AccessoryEditorState, 'newAccessoryName' | 'newAccessoryQuantity'>>): void {
+    this.updateDraft(index, (draft) => ({ ...draft, ...patch }));
+  }
+
+  addAccessory(index: number): void {
+    this.updateDraft(index, (draft) => {
+      const name = draft.newAccessoryName.trim();
+      if (!name) return draft;
+
+      const quantity = Math.max(1, Math.floor(draft.newAccessoryQuantity || 1));
+
+      return { ...draft, accessories: [...draft.accessories, { name, quantity }], newAccessoryName: '', newAccessoryQuantity: 1 };
+    });
+  }
+
+  removeAccessory(index: number, accessoryIndex: number): void {
+    this.updateDraft(index, (draft) => ({
+      ...draft,
+      accessories: draft.accessories.filter((_, j) => j !== accessoryIndex),
+    }));
   }
 
   removeEquipmentDraft(index: number): void {
@@ -301,8 +344,8 @@ export class OrderFormPage implements OnInit, OnDestroy {
 
     this.equipmentsTouched.set(true);
     const raw = this.newEquipmentForm.getRawValue();
-    this.equipmentDrafts.update((current) => [...current, { kind: 'new', ...raw }]);
-    this.newEquipmentForm.reset({ name: '', brand: '', model: '', serial_number: '', asset_tag: '', accessories: '' });
+    this.equipmentDrafts.update((current) => [...current, { kind: 'new', ...raw, ...EMPTY_ACCESSORY_EDITOR }]);
+    this.newEquipmentForm.reset({ name: '', brand: '', model: '', serial_number: '', asset_tag: '' });
     this.addingNewEquipment.set(false);
   }
 
@@ -345,16 +388,18 @@ export class OrderFormPage implements OnInit, OnDestroy {
     this.errorMessage.set(null);
 
     const raw = this.form.getRawValue();
+    const toAccessories = (draft: EquipmentDraft): OrderEquipmentAccessory[] =>
+      draft.accessories.map(({ name, quantity }) => ({ name, quantity }));
     const equipments: OrderInput['equipments'] = this.equipmentDrafts().map((draft) =>
       draft.kind === 'existing'
-        ? { equipment_id: draft.equipment_id, accessories: draft.accessories.trim() || null }
+        ? { equipment_id: draft.equipment_id, accessories: toAccessories(draft) }
         : {
             name: draft.name,
             brand: draft.brand.trim() || null,
             model: draft.model.trim() || null,
             serial_number: draft.serial_number.trim() || null,
             asset_tag: draft.asset_tag.trim() || null,
-            accessories: draft.accessories.trim() || null,
+            accessories: toAccessories(draft),
           },
     );
     const items: OrderInput['items'] = this.itemDrafts().map((item) => ({

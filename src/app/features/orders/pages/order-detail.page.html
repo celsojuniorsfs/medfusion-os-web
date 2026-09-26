@@ -85,8 +85,13 @@
               @if (equipment.serial_number) {
                 <span class="text-muted-foreground"> · Nº série {{ equipment.serial_number }}</span>
               }
-              @if (equipment.accessories) {
-                <p class="mt-0.5 text-muted-foreground">Acessórios: {{ equipment.accessories }}</p>
+              @if (equipment.accessories?.length) {
+                <p class="mt-0.5 text-muted-foreground">Acessórios:</p>
+                <ul class="text-muted-foreground">
+                  @for (accessory of equipment.accessories; track $index) {
+                    <li>{{ accessory.quantity }}x {{ accessory.name }}</li>
+                  }
+                </ul>
               }
             </li>
           }

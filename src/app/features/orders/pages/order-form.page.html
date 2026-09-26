@@ -161,16 +161,50 @@
                     }
                   </div>
 
-                  @if (!lockedByQr()) {
-                    <input
-                      type="text"
-                      [value]="draft.accessories"
-                      (input)="updateExistingEquipmentAccessories(i, $any($event.target).value)"
-                      maxlength="255"
-                      placeholder="Acessórios (opcional)"
-                      class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    />
-                  }
+                  <div class="flex flex-col gap-1.5">
+                    @if (draft.accessories.length > 0) {
+                      <ul class="flex flex-col gap-1">
+                        @for (accessory of draft.accessories; track $index; let j = $index) {
+                          <li class="flex items-center gap-2 text-sm">
+                            <span class="w-8 shrink-0 text-muted-foreground">{{ accessory.quantity }}x</span>
+                            <span class="flex-1">{{ accessory.name }}</span>
+                            <button
+                              type="button"
+                              (click)="removeAccessory(i, j)"
+                              class="shrink-0 text-xs text-destructive hover:underline"
+                            >
+                              Remover
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                    <div class="grid grid-cols-[3.5rem_1fr_auto] gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        [value]="draft.newAccessoryQuantity"
+                        (input)="updateAccessoryEntry(i, { newAccessoryQuantity: +$any($event.target).value || 1 })"
+                        class="h-9 w-full rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Acessório"
+                        maxlength="255"
+                        [value]="draft.newAccessoryName"
+                        (input)="updateAccessoryEntry(i, { newAccessoryName: $any($event.target).value })"
+                        (keydown.enter)="$event.preventDefault(); addAccessory(i)"
+                        class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      />
+                      <button
+                        type="button"
+                        (click)="addAccessory(i)"
+                        class="inline-flex h-9 items-center justify-center rounded-md border border-dashed border-input px-3 text-xs font-medium text-muted-foreground hover:bg-accent"
+                      >
+                        + Adicionar
+                      </button>
+                    </div>
+                  </div>
                 </li>
               }
             </ul>
@@ -244,16 +278,10 @@
                     placeholder="Patrimônio (opcional)"
                     class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   />
-                  <input
-                    type="text"
-                    formControlName="accessories"
-                    maxlength="255"
-                    placeholder="Acessórios (opcional)"
-                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  />
                 </div>
                 <p class="text-xs text-muted-foreground">
-                  Salvo automaticamente no catálogo do cliente para as próximas OS's.
+                  Salvo automaticamente no catálogo do cliente para as próximas OS's — acessórios podem ser
+                  adicionados depois de incluir o equipamento na lista abaixo.
                 </p>
                 <div class="flex gap-2">
                   <button
