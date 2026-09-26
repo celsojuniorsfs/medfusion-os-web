@@ -102,29 +102,7 @@
       </ui-card>
 
       @if (lastPage() > 1) {
-        <div class="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>Página {{ page() }} de {{ lastPage() }} — {{ total() }} no total</span>
-          <div class="flex gap-1">
-            <button
-              type="button"
-              [disabled]="page() <= 1"
-              (click)="goToPage(page() - 1)"
-              class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
-            >
-              <svg lucideChevronLeft [size]="14"></svg>
-              Anterior
-            </button>
-            <button
-              type="button"
-              [disabled]="page() >= lastPage()"
-              (click)="goToPage(page() + 1)"
-              class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
-            >
-              Próxima
-              <svg lucideChevronRight [size]="14"></svg>
-            </button>
-          </div>
-        </div>
+        <ui-pagination [page]="page()" [lastPage]="lastPage()" [total]="total()" [busy]="loading()" (pageChange)="goToPage($event)" />
       }
     }
   }

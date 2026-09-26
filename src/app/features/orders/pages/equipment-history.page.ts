@@ -1,9 +1,9 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { PaginationComponent } from '../../../shared/ui/pagination.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { EquipmentsStore } from '../../clients/data-access/equipments.store';
 import { formatDateBr } from '../data-access/local-date';
@@ -25,7 +25,7 @@ type Equipment = components['schemas']['Equipment'] & { id: string; client_id: s
  */
 @Component({
   selector: 'app-equipment-history-page',
-  imports: [RouterLink, CardComponent, SpinnerComponent, DecimalPipe, LucideChevronLeft, LucideChevronRight],
+  imports: [RouterLink, CardComponent, SpinnerComponent, PaginationComponent, DecimalPipe],
   templateUrl: './equipment-history.page.html',
 })
 export class EquipmentHistoryPage implements OnInit {
@@ -50,20 +50,28 @@ export class EquipmentHistoryPage implements OnInit {
   async ngOnInit(): Promise<void> {
     this.loading.set(true);
 
-    try {
-      const [equipment] = await Promise.all([
-        this.equipmentsStore.findOne(this.equipmentId),
-        this.loadPage(1),
-      ]);
-      this.equipment.set(equipment);
-    } catch {
-      this.errorMessage.set('Não foi possível carregar o histórico deste equipamento.');
-    } finally {
-      this.loading.set(false);
+    // allSettled, não all: se só a busca de OS falhar (rede instável, por exemplo), o cabeçalho
+    // (nome/marca/modelo do equipamento, já resolvido) continua aparecendo — inclusive o link
+    // "Voltar" certo pro catálogo do cliente certo, que depende de equipment.client_id. Com
+    // Promise.all, uma falha isolada em loadPage() derrubaria o findOne() já resolvido junto.
+    const [equipmentResult, historyResult] = await Promise.allSettled([
+      this.equipmentsStore.findOne(this.equipmentId),
+      this.loadPage(1),
+    ]);
+
+    if (equipmentResult.status === 'fulfilled') {
+      this.equipment.set(equipmentResult.value);
     }
+    if (equipmentResult.status === 'rejected' || historyResult.status === 'rejected') {
+      this.errorMessage.set('Não foi possível carregar o histórico deste equipamento.');
+    }
+
+    this.loading.set(false);
   }
 
   async goToPage(page: number): Promise<void> {
+    if (this.loading()) return;
+
     this.loading.set(true);
     try {
       await this.loadPage(page);
