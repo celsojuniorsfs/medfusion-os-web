@@ -82,8 +82,11 @@ test('cria uma OS e baixa o PDF gerado', async ({ page }) => {
   // exact: true — sem isso, bate também no botão "Mostrar senha" (substring "senha" no aria-label).
   await page.getByLabel('Senha', { exact: true }).fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await page.waitForURL('**/orders');
+  // A rota raiz ('/') redireciona pra /clients, não /orders (ver app.routes.ts) — sem returnUrl,
+  // é onde o login cai por padrão.
+  await page.waitForURL('**/clients');
 
+  await page.goto('/orders');
   await page.getByRole('link', { name: 'Nova OS' }).click();
   await page.waitForURL('**/orders/novo');
 
