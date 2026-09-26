@@ -32,8 +32,15 @@ const LABELS: Record<OrderStatus, string> = {
 // relance. `approved`/`not_approved` reaproveitam os tokens de marca já usados no resto do app
 // (`primary`/`destructive`, mesmo padrão do avatar em shell.component.html) — o resto usa
 // famílias do Tailwind padrão que o app já tem disponível.
+//
+// `open` NÃO pode ser uma família cinza (slate/gray/zinc/neutral) mesmo com um tom "diferente"
+// de `bg-muted`: achado num segundo round em produção (26/09/2026) — `--muted` deste design
+// system é `oklch(0.967 0.003 264.542)`, praticamente idêntico ao `slate-100` padrão do
+// Tailwind (`oklch(0.968 0.007 247.9)`, croma quase zero nos dois) — visualmente
+// indistinguível lado a lado, mesmo sendo classes diferentes. `open` precisa de uma matiz de
+// verdade (croma real), não só um tom "mais claro" de cinza.
 const BADGE_CLASSES: Record<OrderStatus, string> = {
-  open: 'bg-slate-100 text-slate-700',
+  open: 'bg-sky-100 text-sky-700',
   in_analysis: 'bg-blue-100 text-blue-700',
   external_quote: 'bg-indigo-100 text-indigo-700',
   awaiting_approval: 'bg-amber-100 text-amber-700',
