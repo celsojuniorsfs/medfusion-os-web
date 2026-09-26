@@ -13,4 +13,11 @@ describe('order-status', () => {
     expect(orderStatusLabel('awaiting_approval')).toBe('Aguardando aprovação');
     expect(orderStatusLabel('completed')).toBe('Concluída');
   });
+
+  // Achado em produção: `open`/`canceled` compartilhavam a mesma classe (bg-muted) — badges
+  // visualmente idênticos na listagem, impossível distinguir status de relance.
+  it('gives every status a distinct badge class', () => {
+    const classes = ORDER_STATUSES.map((status) => orderStatusBadgeClass(status));
+    expect(new Set(classes).size).toBe(ORDER_STATUSES.length);
+  });
 });
