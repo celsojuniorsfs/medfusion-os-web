@@ -133,7 +133,7 @@
               @if (order.status && isOrderEditable(order.status)) {
                 <a
                   [routerLink]="[order.id, 'editar']"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   aria-label="Editar"
                   title="Editar"
                 >
@@ -144,7 +144,7 @@
                 <button
                   type="button"
                   (click)="requestCancel(order.id!, order.number)"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
                   aria-label="Cancelar OS"
                   title="Cancelar OS"
                 >
