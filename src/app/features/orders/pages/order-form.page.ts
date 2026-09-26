@@ -309,15 +309,35 @@ export class OrderFormPage implements OnInit, OnDestroy {
     this.updateDraft(index, (draft) => ({ ...draft, ...patch }));
   }
 
+  // Mesmo padrão de merge-por-nome de equipment-form.page.ts (registerNewAccessory): digitar um
+  // nome já existente na lista soma na quantidade em vez de criar uma segunda linha duplicada.
   addAccessory(index: number): void {
     this.updateDraft(index, (draft) => {
       const name = draft.newAccessoryName.trim();
       if (!name) return draft;
 
       const quantity = Math.max(1, Math.floor(draft.newAccessoryQuantity || 1));
+      const existingIndex = draft.accessories.findIndex((a) => a.name.toLowerCase() === name.toLowerCase());
 
-      return { ...draft, accessories: [...draft.accessories, { name, quantity }], newAccessoryName: '', newAccessoryQuantity: 1 };
+      const accessories =
+        existingIndex === -1
+          ? [...draft.accessories, { name, quantity }]
+          : draft.accessories.map((a, i) => (i === existingIndex ? { ...a, quantity: a.quantity + quantity } : a));
+
+      return { ...draft, accessories, newAccessoryName: '', newAccessoryQuantity: 1 };
     });
+  }
+
+  // Mesmo padrão de equipment-form.page.ts (updateAccessoryQuantity): ajustar a quantidade de um
+  // acessório já adicionado (ex.: o pré-preenchido do catálogo) não deveria exigir remover e
+  // digitar de novo.
+  updateAccessoryQuantity(index: number, accessoryIndex: number, quantity: number): void {
+    if (quantity < 1) return;
+
+    this.updateDraft(index, (draft) => ({
+      ...draft,
+      accessories: draft.accessories.map((a, j) => (j === accessoryIndex ? { ...a, quantity } : a)),
+    }));
   }
 
   removeAccessory(index: number, accessoryIndex: number): void {
