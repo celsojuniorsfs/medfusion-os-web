@@ -11,9 +11,11 @@ import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
 import { EquipmentsStore } from '../../clients/data-access/equipments.store';
 import { todayLocalDate } from '../data-access/local-date';
+import { isOrderEditable } from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
 type OrderInput = components['schemas']['OrderInput'];
+type OrderEquipmentSnapshot = components['schemas']['OrderEquipmentSnapshot'];
 type Client = components['schemas']['Client'] & { id: string };
 type Equipment = components['schemas']['Equipment'] & { id: string; client_id: string };
 type OrderEquipmentAccessory = components['schemas']['OrderEquipmentAccessory'];
@@ -81,10 +83,56 @@ function toExistingDraft(equipment: Equipment): ExistingEquipmentDraft {
 }
 
 /**
+ * Usado só no modo edição (ver loadForEdit()): diferente de toExistingDraft, os acessórios vêm do
+ * PRÓPRIO snapshot da OS (o que já está salvo pra ESTA OS), não pré-preenchidos de novo a partir
+ * do catálogo — editar não deveria descartar acessórios que o técnico já tinha ajustado antes.
+ */
+function toEditDraft(snapshot: OrderEquipmentSnapshot): EquipmentDraft {
+  const accessories = (snapshot.accessories ?? []).map((accessory) => ({
+    name: accessory.name,
+    quantity: accessory.quantity,
+  }));
+
+  if (snapshot.equipment_id) {
+    return {
+      kind: 'existing',
+      equipment_id: snapshot.equipment_id,
+      name: snapshot.name ?? '',
+      brand: snapshot.brand ?? null,
+      model: snapshot.model ?? null,
+      serial_number: snapshot.serial_number ?? null,
+      ...EMPTY_ACCESSORY_EDITOR,
+      accessories,
+    };
+  }
+
+  // equipment_id nulo (o equipamento foi removido do catálogo depois de esta OS ser criada):
+  // reenviar como "novo" é o único jeito de bater com o oneOf de OrderEquipmentInput — recria uma
+  // entrada no catálogo, mesmo comportamento que "cadastrar um equipamento novo" já tem em
+  // qualquer outro fluxo.
+  return {
+    kind: 'new',
+    name: snapshot.name ?? '',
+    brand: snapshot.brand ?? '',
+    model: snapshot.model ?? '',
+    serial_number: snapshot.serial_number ?? '',
+    asset_tag: snapshot.asset_tag ?? '',
+    ...EMPTY_ACCESSORY_EDITOR,
+    accessories,
+  };
+}
+
+/**
  * Nova Ordem de Serviço (web#37/#38/#39 — completa a versão mínima do web#100 com múltiplos
  * equipamentos, peças de reposição/mão de obra e os campos restantes: tipo de atendimento,
  * diagnóstico completo, pagamento e garantia). Conteúdo/copy seguem o mockup de referência em
  * `Telas da Ordem de Serviço.pdf`.
+ *
+ * Também serve de tela de EDIÇÃO na rota `:id/editar` (`editingOrderId` presente) — mesmo form,
+ * `loadForEdit()` no lugar da inicialização de criação, `submit()` chamando `store.update()` em
+ * vez de `store.create()`. Uma OS com status que não aceita mais edição (ver
+ * `order-status.ts::isOrderEditable`, mesma regra que a API aplica em PUT) mostra uma mensagem em
+ * vez do form (`notEditable`).
  *
  * Cliente e listas de equipamento/peças/acessórios ficam FORA do form reativo de propósito: são
  * listas dinâmicas com adicionar/remover, não um valor único que `Validators.required` resolveria
@@ -112,6 +160,18 @@ export class OrderFormPage implements OnInit, OnDestroy {
   protected readonly initialLoading = signal(false);
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+
+  // Presente só na rota `:id/editar` — null em `novo`/`novo/equipamento/:equipmentId`.
+  protected readonly editingOrderId = this.route.snapshot.paramMap.get('id');
+  // A OS carregou mas o status dela não aceita mais edição (ver order-status.ts::isOrderEditable)
+  // — mostra uma mensagem em vez do form, mesmo padrão de qrEquipmentNotFound abaixo.
+  protected readonly notEditable = signal(false);
+  // loadForEdit() falhou (rede, 500, etc.) antes de preencher form/listas — achado em code review:
+  // sem isso, o `@else` cai direto no form em branco (número 1, sem cliente/equipamento) pronto
+  // pra editar uma OS que na real nunca carregou. Bloqueia o form igual notEditable/
+  // qrEquipmentNotFound em vez de só mostrar errorMessage (que fica dentro do form, fácil de não
+  // notar, e não impede o técnico de preencher tudo de novo e sobrescrever a OS de verdade).
+  protected readonly editLoadFailed = signal(false);
 
   // Preenchimento via QR Code (web#101): cliente e equipamento chegam travados, sobrando só o
   // resto do formulário. `qrEquipmentNotFound` cobre a etiqueta antiga apontando pra um
@@ -221,6 +281,18 @@ export class OrderFormPage implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.initialLoading.set(true);
 
+    if (this.editingOrderId) {
+      try {
+        await this.loadForEdit(this.editingOrderId);
+      } catch {
+        this.editLoadFailed.set(true);
+      } finally {
+        this.initialLoading.set(false);
+      }
+
+      return;
+    }
+
     const equipmentId = this.route.snapshot.paramMap.get('equipmentId');
 
     try {
@@ -234,6 +306,53 @@ export class OrderFormPage implements OnInit, OnDestroy {
     } finally {
       this.initialLoading.set(false);
     }
+  }
+
+  /**
+   * Modo edição: carrega a OS, checa se o status ainda aceita edição (mesma regra que a API
+   * aplica em PUT — ver order-status.ts::isOrderEditable) e preenche form/listas a partir do
+   * snapshot salvo. Diferente do fluxo de criação, não sugere número novo (o número já é o dela)
+   * nem mexe em lockedByQr (edição não vem de QR Code).
+   */
+  private async loadForEdit(orderId: string): Promise<void> {
+    const order = await this.store.findOne(orderId);
+
+    if (!isOrderEditable(order.status!)) {
+      this.notEditable.set(true);
+      return;
+    }
+
+    const clientId = order.client!.id!;
+    await Promise.all([this.clientsStore.findOne(clientId), this.equipmentsStore.load(clientId)]);
+    this.clientId.set(clientId);
+    this.clientTouched.set(true);
+
+    this.form.patchValue({
+      number: order.number,
+      date: order.date,
+      picked_up: order.picked_up,
+      warranty: order.warranty,
+      technical_training: order.technical_training,
+      on_site_quote: order.on_site_quote,
+      rental: order.rental,
+      reported_defect: order.reported_defect ?? '',
+      maintenance_plan: order.maintenance_plan ?? '',
+      notes: order.notes ?? '',
+      payment_method: order.payment_method ?? '',
+      warranty_period: order.warranty_period ?? '',
+      proposal_validity: order.proposal_validity ?? '',
+      labor_cost: order.labor_cost ?? null,
+    });
+
+    this.equipmentDrafts.set((order.equipments ?? []).map(toEditDraft));
+    this.equipmentsTouched.set(true);
+    this.itemDrafts.set(
+      (order.items ?? []).map((item) => ({
+        quantity: item.quantity!,
+        description: item.description!,
+        unit_price: item.unit_price ?? null,
+      })),
+    );
   }
 
   private async loadFromQrEquipment(equipmentId: string): Promise<void> {
@@ -449,9 +568,15 @@ export class OrderFormPage implements OnInit, OnDestroy {
     };
 
     try {
-      await this.store.create(input);
-      toast.success('Ordem de serviço aberta.');
-      await this.router.navigate(['/orders']);
+      if (this.editingOrderId) {
+        await this.store.update(this.editingOrderId, input);
+        toast.success('Ordem de serviço atualizada.');
+        await this.router.navigate(['/orders', this.editingOrderId]);
+      } else {
+        await this.store.create(input);
+        toast.success('Ordem de serviço aberta.');
+        await this.router.navigate(['/orders']);
+      }
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 409) {
         this.form.get('number')?.setErrors({ server: true });

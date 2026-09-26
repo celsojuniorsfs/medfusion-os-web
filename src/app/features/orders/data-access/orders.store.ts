@@ -124,6 +124,36 @@ export const OrdersStore = signalStore(
         }
       },
 
+      /**
+       * PUT /orders/{id} — substitui equipamentos/peças por completo (mesmo contrato de create,
+       * ver OrderInput). A API rejeita com 409 se a OS não estiver mais num status editável (ver
+       * order-status.ts::isOrderEditable) — quem chama trata o erro, igual create().
+       */
+      async update(id: string, input: OrderInput): Promise<Order> {
+        const response = await firstValueFrom(
+          http.put<{ data: Order }>(`${environment.apiUrl}/orders/${id}`, input),
+        );
+
+        patchState(store, upsertEntity(response.data));
+
+        return response.data;
+      },
+
+      /**
+       * PATCH /orders/{id}/status — hoje só usado pra cancelar (ver order-status.ts::isOrderCancelable),
+       * mas aceita qualquer status válido igual a API. upsertEntity (não updateEntity) porque a
+       * resposta já traz a OS inteira — reaproveita, não pisa só no campo status.
+       */
+      async changeStatus(id: string, status: OrderStatus): Promise<Order> {
+        const response = await firstValueFrom(
+          http.patch<{ data: Order }>(`${environment.apiUrl}/orders/${id}/status`, { status }),
+        );
+
+        patchState(store, upsertEntity(response.data));
+
+        return response.data;
+      },
+
       async findOne(id: string): Promise<Order> {
         const response = await firstValueFrom(
           http.get<{ data: Order }>(`${environment.apiUrl}/orders/${id}`),

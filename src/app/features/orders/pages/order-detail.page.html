@@ -14,7 +14,27 @@
         <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ formatDateBr(order.date) }}</p>
       </div>
 
-      <div class="flex flex-col items-start gap-1.5">
+      <div class="flex flex-col items-start gap-2">
+        <div class="flex gap-2">
+          @if (order.status && isOrderEditable(order.status)) {
+            <a
+              [routerLink]="['/orders', order.id, 'editar']"
+              class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
+            >
+              Editar
+            </a>
+          }
+          @if (order.status && isOrderCancelable(order.status)) {
+            <button
+              type="button"
+              (click)="requestCancel()"
+              class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
+            >
+              Cancelar OS
+            </button>
+          }
+        </div>
+
         <button
           type="button"
           [disabled]="pdfBusy()"
@@ -171,5 +191,13 @@
         </div>
       </div>
     </ui-card>
+
+    <ui-confirm-dialog
+      title="Cancelar OS"
+      description="Cancelar esta OS? Essa ação não pode ser desfeita."
+      confirmLabel="Cancelar OS"
+      [pending]="canceling()"
+      (confirmed)="confirmCancel()"
+    />
   }
 </div>

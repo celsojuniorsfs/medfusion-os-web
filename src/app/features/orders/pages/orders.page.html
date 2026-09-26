@@ -114,13 +114,14 @@
       <p class="p-6 text-sm text-muted-foreground">Nenhuma ordem de serviço encontrada para esses filtros.</p>
     </ui-card>
   } @else {
-    <!-- Abaixo de 768px: um card por OS, sem tabela. -->
+    <!-- Abaixo de 768px: um card por OS, sem tabela. Card é <div> (não <a>) porque os ícones de
+    ação abaixo são elementos interativos — não dá pra aninhar <a>/<button> dentro de <a>. -->
     <div class="flex flex-col gap-3 md:hidden">
       @for (order of store.entities(); track order.id) {
-        <a [routerLink]="[order.id]" class="block">
-          <ui-card class="p-4">
-            <div class="flex items-start justify-between gap-2">
-              <span class="font-medium">Nº {{ order.number }}</span>
+        <ui-card class="p-4">
+          <div class="flex items-start justify-between gap-2">
+            <a [routerLink]="[order.id]" class="font-medium hover:underline">Nº {{ order.number }}</a>
+            <div class="flex shrink-0 items-center gap-1">
               @if (order.status) {
                 <span
                   class="inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-xs font-medium"
@@ -129,14 +130,35 @@
                   {{ orderStatusLabel(order.status) }}
                 </span>
               }
+              @if (order.status && isOrderEditable(order.status)) {
+                <a
+                  [routerLink]="[order.id, 'editar']"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  aria-label="Editar"
+                  title="Editar"
+                >
+                  <svg lucidePencil [size]="16"></svg>
+                </a>
+              }
+              @if (order.status && isOrderCancelable(order.status)) {
+                <button
+                  type="button"
+                  (click)="requestCancel(order.id!, order.number)"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                  aria-label="Cancelar OS"
+                  title="Cancelar OS"
+                >
+                  <svg lucideBan [size]="16"></svg>
+                </button>
+              }
             </div>
-            <div class="mt-1 flex items-center justify-between text-sm text-muted-foreground">
-              <span class="truncate">{{ order.client?.name }}</span>
-              <span>{{ formatDateBr(order.date) }}</span>
-            </div>
-            <div class="mt-1 text-sm">{{ order.total ? 'R$ ' + (order.total | number: '1.2-2') : '—' }}</div>
-          </ui-card>
-        </a>
+          </div>
+          <a [routerLink]="[order.id]" class="mt-1 flex items-center justify-between text-sm text-muted-foreground">
+            <span class="truncate">{{ order.client?.name }}</span>
+            <span>{{ formatDateBr(order.date) }}</span>
+          </a>
+          <div class="mt-1 text-sm">{{ order.total ? 'R$ ' + (order.total | number: '1.2-2') : '—' }}</div>
+        </ui-card>
       }
     </div>
 
@@ -151,6 +173,7 @@
               <th class="whitespace-nowrap px-4 py-3 font-medium">Data</th>
               <th class="whitespace-nowrap px-4 py-3 font-medium">Status</th>
               <th class="whitespace-nowrap px-4 py-3 font-medium">Total</th>
+              <th class="whitespace-nowrap px-4 py-3 font-medium"><span class="sr-only">Ações</span></th>
             </tr>
           </thead>
           <tbody>
@@ -174,6 +197,31 @@
                 <td class="whitespace-nowrap px-4 py-3">
                   {{ order.total ? 'R$ ' + (order.total | number: '1.2-2') : '—' }}
                 </td>
+                <td class="px-4 py-3">
+                  <div class="flex justify-end gap-1">
+                    @if (order.status && isOrderEditable(order.status)) {
+                      <a
+                        [routerLink]="[order.id, 'editar']"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        aria-label="Editar"
+                        title="Editar"
+                      >
+                        <svg lucidePencil [size]="16"></svg>
+                      </a>
+                    }
+                    @if (order.status && isOrderCancelable(order.status)) {
+                      <button
+                        type="button"
+                        (click)="requestCancel(order.id!, order.number)"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                        aria-label="Cancelar OS"
+                        title="Cancelar OS"
+                      >
+                        <svg lucideBan [size]="16"></svg>
+                      </button>
+                    }
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
@@ -191,4 +239,12 @@
       (pageChange)="goToPage($event)"
     />
   }
+
+  <ui-confirm-dialog
+    title="Cancelar OS"
+    [description]="pendingCancel() ? 'Cancelar a OS nº ' + pendingCancel()!.number + '? Essa ação não pode ser desfeita.' : ''"
+    confirmLabel="Cancelar OS"
+    [pending]="canceling()"
+    (confirmed)="confirmCancel()"
+  />
 </div>

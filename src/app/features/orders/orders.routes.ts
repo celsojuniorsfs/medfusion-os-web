@@ -12,8 +12,9 @@ export const ORDERS_ROUTES: Routes = [
     path: 'historico/equipamento/:equipmentId',
     loadComponent: () => import('./pages/equipment-history.page').then((m) => m.EquipmentHistoryPage),
   },
+  { path: ':id/editar', loadComponent: () => import('./pages/order-form.page').then((m) => m.OrderFormPage) },
   // Precisa vir por último: rota com parâmetro genérico captura qualquer segmento, então tem que
-  // ficar depois de todas as rotas literais acima (novo/escanear/historico), senão elas nunca
-  // seriam alcançadas.
+  // ficar depois de todas as rotas literais acima (novo/escanear/historico/:id/editar), senão elas
+  // nunca seriam alcançadas.
   { path: ':id', loadComponent: () => import('./pages/order-detail.page').then((m) => m.OrderDetailPage) },
 ];

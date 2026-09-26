@@ -1,14 +1,22 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucidePlus, LucideScanQrCode } from '@lucide/angular';
+import { LucideBan, LucidePencil, LucidePlus, LucideScanQrCode } from '@lucide/angular';
+import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
 import { PaginationComponent } from '../../../shared/ui/pagination.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
 import { formatDateBr } from '../data-access/local-date';
-import { ORDER_STATUSES, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
+import {
+  ORDER_STATUSES,
+  isOrderCancelable,
+  isOrderEditable,
+  orderStatusBadgeClass,
+  orderStatusLabel,
+} from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
 type Client = components['schemas']['Client'] & { id: string };
@@ -19,10 +27,25 @@ type OrderStatus = components['schemas']['OrderStatus'];
  * do próprio backend, sem parâmetro de ordenação), paginação — mesmo molde de
  * `features/clients/pages/clients.page.ts`. O filtro de cliente é busca-e-seleciona (produz um
  * `client_id`), não texto livre: `GET /orders` filtra por id, não por nome.
+ *
+ * Ações de editar/cancelar por linha seguem o mesmo par requestRemove/confirmRemove de
+ * `clients.page.ts`, só que "cancelar" muda o status em vez de remover (não existe DELETE de OS —
+ * é um agregado de event sourcing, cancelar é a única forma de "desativar").
  */
 @Component({
   selector: 'app-orders-page',
-  imports: [RouterLink, CardComponent, SpinnerComponent, PaginationComponent, DecimalPipe, LucidePlus, LucideScanQrCode],
+  imports: [
+    RouterLink,
+    CardComponent,
+    ConfirmDialogComponent,
+    SpinnerComponent,
+    PaginationComponent,
+    DecimalPipe,
+    LucidePlus,
+    LucideScanQrCode,
+    LucidePencil,
+    LucideBan,
+  ],
   templateUrl: './orders.page.html',
 })
 export class OrdersPage implements OnInit, OnDestroy {
@@ -30,8 +53,14 @@ export class OrdersPage implements OnInit, OnDestroy {
   protected readonly clientsStore = inject(ClientsStore);
   protected readonly orderStatusLabel = orderStatusLabel;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
+  protected readonly isOrderEditable = isOrderEditable;
+  protected readonly isOrderCancelable = isOrderCancelable;
   protected readonly formatDateBr = formatDateBr;
   protected readonly statuses = ORDER_STATUSES;
+
+  protected readonly pendingCancel = signal<{ id: string; number: number } | null>(null);
+  protected readonly canceling = signal(false);
+  private readonly cancelDialog = viewChild.required(ConfirmDialogComponent);
 
   protected readonly clientFilterSearch = signal('');
   protected readonly clientFilterId = signal<string | null>(null);
@@ -100,5 +129,29 @@ export class OrdersPage implements OnInit, OnDestroy {
 
   goToPage(page: number): void {
     this.store.load(page, this.store.filters());
+  }
+
+  requestCancel(id: string, number: number | undefined): void {
+    this.pendingCancel.set({ id, number: number ?? 0 });
+    this.cancelDialog().open();
+  }
+
+  async confirmCancel(): Promise<void> {
+    const pending = this.pendingCancel();
+    if (!pending) return;
+
+    this.canceling.set(true);
+    try {
+      await this.store.changeStatus(pending.id, 'canceled');
+      this.cancelDialog().close();
+      toast.success('Ordem de serviço cancelada.');
+    } catch {
+      // Fecha o diálogo antes do toast — senão o backdrop dele fica por cima da mensagem de erro
+      // (ver o mesmo comentário em clients.page.ts::confirmRemove).
+      this.cancelDialog().close();
+      toast.error('Não foi possível cancelar a OS. Tente novamente.');
+    } finally {
+      this.canceling.set(false);
+    }
   }
 }
