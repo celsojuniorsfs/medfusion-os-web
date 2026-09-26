@@ -8,58 +8,9 @@
   } @else if (errorMessage()) {
     <ui-card><p class="p-6 text-sm text-destructive">{{ errorMessage() }}</p></ui-card>
   } @else if (order(); as order) {
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold">OS Nº {{ order.number }}</h1>
-        <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ formatDateBr(order.date) }}</p>
-      </div>
-
-      <div class="flex flex-col gap-2 sm:items-end">
-        <div class="flex flex-col gap-2 sm:flex-row">
-          @if (order.status && isOrderEditable(order.status)) {
-            <a
-              [routerLink]="['/orders', order.id, 'editar']"
-              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
-            >
-              <svg lucidePencil [size]="16"></svg>
-              Editar
-            </a>
-          }
-          @if (order.status && isOrderCancelable(order.status)) {
-            <button
-              type="button"
-              (click)="requestCancel()"
-              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
-            >
-              <svg lucideBan [size]="16"></svg>
-              Cancelar OS
-            </button>
-          }
-          <button
-            type="button"
-            [disabled]="pdfBusy()"
-            (click)="downloadPdf()"
-            class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-          >
-            @if (pdfBusy()) {
-              <ui-spinner /> Gerando PDF...
-            } @else {
-              <svg lucideDownload [size]="16"></svg>
-              Baixar PDF
-            }
-          </button>
-        </div>
-        @if (order.pdf_generated_at) {
-          <button
-            type="button"
-            [disabled]="pdfBusy()"
-            (click)="regeneratePdf()"
-            class="self-end text-xs text-muted-foreground underline hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-          >
-            Gerar novamente
-          </button>
-        }
-      </div>
+    <div>
+      <h1 class="text-xl font-semibold">OS Nº {{ order.number }}</h1>
+      <p class="text-sm text-muted-foreground">{{ order.client?.name }} · {{ formatDateBr(order.date) }}</p>
     </div>
 
     <ui-card class="flex max-w-2xl flex-col gap-4 p-4 md:p-6">
@@ -193,6 +144,32 @@
         </div>
       </div>
     </ui-card>
+
+    <div class="flex max-w-2xl flex-col gap-2 sm:flex-row sm:justify-end">
+      @if (order.status && isOrderCancelable(order.status)) {
+        <button
+          type="button"
+          (click)="requestCancel()"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
+        >
+          <svg lucideBan [size]="16"></svg>
+          Cancelar OS
+        </button>
+      }
+      <button
+        type="button"
+        [disabled]="pdfBusy()"
+        (click)="downloadPdf()"
+        class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+      >
+        @if (pdfBusy()) {
+          <ui-spinner /> Gerando PDF...
+        } @else {
+          <svg lucideDownload [size]="16"></svg>
+          Baixar PDF
+        }
+      </button>
+    </div>
 
     <ui-confirm-dialog
       title="Cancelar OS"

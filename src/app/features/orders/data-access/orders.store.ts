@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { effect, inject } from '@angular/core';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
 import {
@@ -168,22 +168,11 @@ export const OrdersStore = signalStore(
       },
 
       /**
-       * POST /orders/{id}/pdf — gera um arquivo novo a cada chamada (a API guarda todos, nunca
-       * sobrescreve). Não mexe em `entities()`: só o botão de download em order-detail.page usa
-       * isto, a listagem/detalhe não precisam saber da URL assinada.
+       * POST /orders/{id}/pdf — gera um arquivo novo a cada chamada e a API apaga o anterior. Não
+       * mexe em `entities()` (ver openOrderPdf, usado pelo detalhe e pela listagem).
        */
       async generatePdf(id: string): Promise<OrderPdf> {
         return firstValueFrom(http.post<OrderPdf>(`${environment.apiUrl}/orders/${id}/pdf`, {}));
-      },
-
-      /** GET /orders/{id}/pdf — 404 (nenhum PDF gerado ainda) vira `null`, não uma exceção. */
-      async getPdf(id: string): Promise<OrderPdf | null> {
-        try {
-          return await firstValueFrom(http.get<OrderPdf>(`${environment.apiUrl}/orders/${id}/pdf`));
-        } catch (error) {
-          if (error instanceof HttpErrorResponse && error.status === 404) return null;
-          throw error;
-        }
       },
 
       /**
