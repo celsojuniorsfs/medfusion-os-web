@@ -79,7 +79,8 @@ test.beforeAll(async ({ request }) => {
 test('cria uma OS e baixa o PDF gerado', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('E-mail').fill(ADMIN_EMAIL);
-  await page.getByLabel('Senha').fill(ADMIN_PASSWORD);
+  // exact: true — sem isso, bate também no botão "Mostrar senha" (substring "senha" no aria-label).
+  await page.getByLabel('Senha', { exact: true }).fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.waitForURL('**/orders');
 
