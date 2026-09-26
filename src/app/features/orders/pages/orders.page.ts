@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideBan, LucidePencil, LucidePlus, LucideScanQrCode } from '@lucide/angular';
+import { LucideBan, LucideDownload, LucidePencil, LucidePlus, LucideScanQrCode } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
@@ -10,6 +10,7 @@ import { PaginationComponent } from '../../../shared/ui/pagination.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
 import { formatDateBr } from '../data-access/local-date';
+import { openOrderPdf } from '../data-access/open-order-pdf';
 import {
   ORDER_STATUSES,
   isOrderCancelable,
@@ -43,6 +44,7 @@ type OrderStatus = components['schemas']['OrderStatus'];
     DecimalPipe,
     LucidePlus,
     LucideScanQrCode,
+    LucideDownload,
     LucidePencil,
     LucideBan,
   ],
@@ -60,6 +62,7 @@ export class OrdersPage implements OnInit, OnDestroy {
 
   protected readonly pendingCancel = signal<{ id: string; number: number } | null>(null);
   protected readonly canceling = signal(false);
+  protected readonly pdfBusyId = signal<string | null>(null);
   private readonly cancelDialog = viewChild.required(ConfirmDialogComponent);
 
   protected readonly clientFilterSearch = signal('');
@@ -152,6 +155,20 @@ export class OrdersPage implements OnInit, OnDestroy {
       toast.error('Não foi possível cancelar a OS. Tente novamente.');
     } finally {
       this.canceling.set(false);
+    }
+  }
+
+  // Um de cada vez: um segundo clique enquanto o primeiro gera abriria outra aba em branco.
+  async downloadPdf(id: string): Promise<void> {
+    if (this.pdfBusyId()) return;
+
+    this.pdfBusyId.set(id);
+    try {
+      await openOrderPdf(this.store, id);
+    } catch {
+      toast.error('Não foi possível gerar o PDF da OS.');
+    } finally {
+      this.pdfBusyId.set(null);
     }
   }
 }

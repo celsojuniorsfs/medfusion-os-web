@@ -130,6 +130,20 @@
                   {{ orderStatusLabel(order.status) }}
                 </span>
               }
+              <button
+                type="button"
+                [disabled]="!!pdfBusyId()"
+                (click)="downloadPdf(order.id!)"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                aria-label="Baixar PDF"
+                title="Baixar PDF"
+              >
+                @if (pdfBusyId() === order.id) {
+                  <ui-spinner />
+                } @else {
+                  <svg lucideDownload [size]="16"></svg>
+                }
+              </button>
               @if (order.status && isOrderEditable(order.status)) {
                 <a
                   [routerLink]="[order.id, 'editar']"
@@ -199,6 +213,20 @@
                 </td>
                 <td class="px-4 py-3">
                   <div class="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      [disabled]="!!pdfBusyId()"
+                      (click)="downloadPdf(order.id!)"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                      aria-label="Baixar PDF"
+                      title="Baixar PDF"
+                    >
+                      @if (pdfBusyId() === order.id) {
+                        <ui-spinner />
+                      } @else {
+                        <svg lucideDownload [size]="16"></svg>
+                      }
+                    </button>
                     @if (order.status && isOrderEditable(order.status)) {
                       <a
                         [routerLink]="[order.id, 'editar']"

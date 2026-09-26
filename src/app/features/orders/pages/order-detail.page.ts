@@ -1,13 +1,14 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideBan, LucideDownload, LucidePencil } from '@lucide/angular';
+import { LucideBan, LucideDownload } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { formatDateBr } from '../data-access/local-date';
-import { isOrderCancelable, isOrderEditable, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
+import { openOrderPdf } from '../data-access/open-order-pdf';
+import { isOrderCancelable, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
 /**
@@ -16,8 +17,9 @@ import { OrdersStore } from '../data-access/orders.store';
  * existe no modelo de dados hoje) e sem link "Ver histórico do equipamento" (aponta pra tela do
  * web#58, fora de escopo).
  *
- * Botões de Editar/Cancelar seguem o mesmo par requestCancel/confirmCancel de `orders.page.ts` —
- * ver o comentário lá pra por que "cancelar" é a única forma de "desativar" uma OS.
+ * Sem botão de Editar aqui (editar é pelo lápis da listagem). Cancelar segue o mesmo par
+ * requestCancel/confirmCancel de `orders.page.ts` — ver o comentário lá pra por que "cancelar" é a
+ * única forma de "desativar" uma OS.
  */
 @Component({
   selector: 'app-order-detail-page',
@@ -29,7 +31,6 @@ import { OrdersStore } from '../data-access/orders.store';
     DecimalPipe,
     LucideBan,
     LucideDownload,
-    LucidePencil,
   ],
   templateUrl: './order-detail.page.html',
 })
@@ -46,7 +47,6 @@ export class OrderDetailPage implements OnInit {
 
   protected readonly orderStatusLabel = orderStatusLabel;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
-  protected readonly isOrderEditable = isOrderEditable;
   protected readonly isOrderCancelable = isOrderCancelable;
   protected readonly formatDateBr = formatDateBr;
 
@@ -103,52 +103,13 @@ export class OrderDetailPage implements OnInit {
   }
 
   async downloadPdf(): Promise<void> {
-    await this.openPdf(false);
-  }
-
-  async regeneratePdf(): Promise<void> {
-    await this.openPdf(true);
-  }
-
-  /**
-   * `window.open('', '_blank')` roda ANTES de qualquer `await` — ainda dentro do gesto síncrono
-   * do clique, então nunca cai no bloqueador de pop-up (que só bloqueia `window.open()` chamado
-   * depois de atravessar uma fronteira assíncrona). Navegar a aba já aberta pra URL assinada, uma
-   * vez que ela chega, funciona igual em desktop e celular — o navegador/SO decide a melhor forma
-   * de mostrar o PDF, sem precisar de blob nem do atributo `download` (que o Safari mobile mais
-   * antigo ignora).
-   */
-  private async openPdf(forceRegenerate: boolean): Promise<void> {
     const order = this.order();
     if (!order || this.pdfBusy()) return;
 
-    const tab = window.open('', '_blank');
     this.pdfBusy.set(true);
-
     try {
-      const needsGeneration =
-        forceRegenerate ||
-        !order.pdf_generated_at ||
-        (!!order.updated_at && new Date(order.pdf_generated_at) < new Date(order.updated_at));
-
-      let pdf = needsGeneration ? null : await this.store.getPdf(order.id);
-      if (!pdf) {
-        // Também cobre o caso raro de getPdf() 404ar apesar de pdf_generated_at estar
-        // preenchido (registro sumiu no servidor) — sempre que ESTA chamada gera de verdade,
-        // markPdfGenerated roda, não importa qual ramo decidiu gerar.
-        pdf = await this.store.generatePdf(order.id);
-        if (pdf.generated_at) this.store.markPdfGenerated(order.id, pdf.generated_at);
-      }
-
-      if (!pdf.url) throw new Error('Resposta do PDF sem URL.');
-
-      if (tab) {
-        tab.location.href = pdf.url;
-      } else {
-        window.location.href = pdf.url;
-      }
+      await openOrderPdf(this.store, order.id);
     } catch {
-      tab?.close();
       toast.error('Não foi possível gerar o PDF da OS.');
     } finally {
       this.pdfBusy.set(false);
