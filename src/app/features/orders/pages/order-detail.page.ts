@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { LucideBan, LucideDownload, LucidePencil } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
@@ -20,7 +21,16 @@ import { OrdersStore } from '../data-access/orders.store';
  */
 @Component({
   selector: 'app-order-detail-page',
-  imports: [RouterLink, CardComponent, ConfirmDialogComponent, SpinnerComponent, DecimalPipe],
+  imports: [
+    RouterLink,
+    CardComponent,
+    ConfirmDialogComponent,
+    SpinnerComponent,
+    DecimalPipe,
+    LucideBan,
+    LucideDownload,
+    LucidePencil,
+  ],
   templateUrl: './order-detail.page.html',
 })
 export class OrderDetailPage implements OnInit {
