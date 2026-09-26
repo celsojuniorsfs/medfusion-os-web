@@ -27,13 +27,18 @@ const LABELS: Record<OrderStatus, string> = {
   canceled: 'Cancelada',
 };
 
+// Uma cor por status, nenhuma repetida — achado em produção: `open`/`canceled` (as duas mais
+// comuns na listagem) compartilhavam a mesma classe (`bg-muted`), impossível distinguir de
+// relance. `approved`/`not_approved` reaproveitam os tokens de marca já usados no resto do app
+// (`primary`/`destructive`, mesmo padrão do avatar em shell.component.html) — o resto usa
+// famílias do Tailwind padrão que o app já tem disponível.
 const BADGE_CLASSES: Record<OrderStatus, string> = {
-  open: 'bg-muted text-muted-foreground',
+  open: 'bg-slate-100 text-slate-700',
   in_analysis: 'bg-blue-100 text-blue-700',
-  external_quote: 'bg-blue-100 text-blue-700',
+  external_quote: 'bg-indigo-100 text-indigo-700',
   awaiting_approval: 'bg-amber-100 text-amber-700',
-  approved: 'bg-green-100 text-green-700',
-  not_approved: 'bg-red-100 text-red-700',
+  approved: 'bg-primary/15 text-primary',
+  not_approved: 'bg-destructive/15 text-destructive',
   warranty_repair: 'bg-orange-100 text-orange-700',
   completed: 'bg-emerald-100 text-emerald-700',
   canceled: 'bg-muted text-muted-foreground',
