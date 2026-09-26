@@ -1,14 +1,10 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  LucideChevronLeft,
-  LucideChevronRight,
-  LucidePlus,
-  LucideScanQrCode,
-} from '@lucide/angular';
+import { LucidePlus, LucideScanQrCode } from '@lucide/angular';
 import { components } from '../../../core/api-types';
 import { CardComponent } from '../../../shared/ui/card.component';
+import { PaginationComponent } from '../../../shared/ui/pagination.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
 import { formatDateBr } from '../data-access/local-date';
@@ -26,16 +22,7 @@ type OrderStatus = components['schemas']['OrderStatus'];
  */
 @Component({
   selector: 'app-orders-page',
-  imports: [
-    RouterLink,
-    CardComponent,
-    SpinnerComponent,
-    DecimalPipe,
-    LucidePlus,
-    LucideScanQrCode,
-    LucideChevronLeft,
-    LucideChevronRight,
-  ],
+  imports: [RouterLink, CardComponent, SpinnerComponent, PaginationComponent, DecimalPipe, LucidePlus, LucideScanQrCode],
   templateUrl: './orders.page.html',
 })
 export class OrdersPage implements OnInit, OnDestroy {

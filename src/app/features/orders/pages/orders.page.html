@@ -183,28 +183,12 @@
   }
 
   @if (!store.loading() && !store.error() && store.entities().length > 0) {
-    <div class="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-      <span>Página {{ store.page() }} de {{ store.lastPage() }} — {{ store.total() }} no total</span>
-      <div class="flex gap-1">
-        <button
-          type="button"
-          [disabled]="store.page() <= 1"
-          (click)="goToPage(store.page() - 1)"
-          class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
-        >
-          <svg lucideChevronLeft [size]="14"></svg>
-          Anterior
-        </button>
-        <button
-          type="button"
-          [disabled]="store.page() >= store.lastPage()"
-          (click)="goToPage(store.page() + 1)"
-          class="inline-flex h-9 items-center gap-1 rounded-md border border-input px-3 disabled:pointer-events-none disabled:opacity-50"
-        >
-          Próxima
-          <svg lucideChevronRight [size]="14"></svg>
-        </button>
-      </div>
-    </div>
+    <ui-pagination
+      [page]="store.page()"
+      [lastPage]="store.lastPage()"
+      [total]="store.total()"
+      [busy]="store.loading()"
+      (pageChange)="goToPage($event)"
+    />
   }
 </div>

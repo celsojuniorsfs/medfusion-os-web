@@ -157,6 +157,20 @@ export const OrdersStore = signalStore(
       },
 
       /**
+       * GET /orders?equipment_id=... — histórico de OS de UM equipamento (web#58). Não mexe em
+       * `entities()`/`page`/`filters` do estado principal: devolve a página direto pra tela de
+       * histórico, sem pisar no estado da listagem `/orders` se as duas telas estiverem abertas em
+       * abas diferentes.
+       */
+      async loadEquipmentHistory(equipmentId: string, page = 1): Promise<Pagination & { data: Order[] }> {
+        return firstValueFrom(
+          http.get<Pagination & { data: Order[] }>(`${environment.apiUrl}/orders`, {
+            params: { equipment_id: equipmentId, page },
+          }),
+        );
+      },
+
+      /**
        * Atualiza só `pdf_generated_at` na entidade local — evita um GET /orders/{id} inteiro
        * (reconstruindo client/equipments/items) só pra aprender um timestamp que a resposta de
        * generatePdf() já trouxe.

@@ -143,6 +143,30 @@ describe('OrdersStore', () => {
     expect(store.entities()[0].number).toBe(9999);
   });
 
+  it('loadEquipmentHistory() filters by equipment_id and does not touch entities()', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const loadPromise = store.load();
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders?page=1`)
+      .flush({ data: [anOrder({ id: 'order-1' })], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } });
+    await loadPromise;
+
+    const historyPromise = store.loadEquipmentHistory('equipment-1', 2);
+    const req = httpMock.expectOne(
+      (r) => r.url === `${environment.apiUrl}/orders` && r.params.get('equipment_id') === 'equipment-1' && r.params.get('page') === '2',
+    );
+    req.flush({ data: [anOrder({ id: 'order-2' })], meta: { current_page: 2, last_page: 3, per_page: 15, total: 31 } });
+
+    const response = await historyPromise;
+
+    expect(response.data).toHaveLength(1);
+    expect(response.meta?.last_page).toBe(3);
+    // O estado principal (usado pela listagem /orders) fica intacto.
+    expect(store.entities().map((o) => o.id)).toEqual(['order-1']);
+    expect(store.page()).toBe(1);
+  });
+
   it('generatePdf() posts to /orders/{id}/pdf and returns the signed url', async () => {
     const store = TestBed.inject(OrdersStore);
 

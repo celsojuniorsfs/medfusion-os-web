@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal, viewChild } from '@angular
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   LucideChevronDown,
+  LucideHistory,
   LucidePencil,
   LucidePlus,
   LucideQrCode,
@@ -35,6 +36,7 @@ import { EquipmentsStore } from '../data-access/equipments.store';
     LucideTrash,
     LucideChevronDown,
     LucideQrCode,
+    LucideHistory,
   ],
   templateUrl: './equipments.page.html',
 })
