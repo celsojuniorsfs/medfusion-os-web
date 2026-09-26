@@ -14,6 +14,11 @@
         <p>Esta ordem de serviço não pode mais ser editada — o status atual não permite alterações.</p>
         <a [routerLink]="['/orders', editingOrderId]" class="w-fit text-primary hover:underline">Ver a OS</a>
       </div>
+    } @else if (editLoadFailed()) {
+      <div class="flex flex-col gap-3 p-2 text-sm">
+        <p class="text-destructive">Não foi possível carregar esta ordem de serviço. Tente novamente.</p>
+        <a [routerLink]="['/orders', editingOrderId]" class="w-fit text-primary hover:underline">Voltar pra OS</a>
+      </div>
     } @else if (qrEquipmentNotFound()) {
       <div class="flex flex-col gap-3 p-2 text-sm">
         <p>

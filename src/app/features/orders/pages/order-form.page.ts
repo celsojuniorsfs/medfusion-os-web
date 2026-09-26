@@ -166,6 +166,12 @@ export class OrderFormPage implements OnInit, OnDestroy {
   // A OS carregou mas o status dela não aceita mais edição (ver order-status.ts::isOrderEditable)
   // — mostra uma mensagem em vez do form, mesmo padrão de qrEquipmentNotFound abaixo.
   protected readonly notEditable = signal(false);
+  // loadForEdit() falhou (rede, 500, etc.) antes de preencher form/listas — achado em code review:
+  // sem isso, o `@else` cai direto no form em branco (número 1, sem cliente/equipamento) pronto
+  // pra editar uma OS que na real nunca carregou. Bloqueia o form igual notEditable/
+  // qrEquipmentNotFound em vez de só mostrar errorMessage (que fica dentro do form, fácil de não
+  // notar, e não impede o técnico de preencher tudo de novo e sobrescrever a OS de verdade).
+  protected readonly editLoadFailed = signal(false);
 
   // Preenchimento via QR Code (web#101): cliente e equipamento chegam travados, sobrando só o
   // resto do formulário. `qrEquipmentNotFound` cobre a etiqueta antiga apontando pra um
@@ -279,7 +285,7 @@ export class OrderFormPage implements OnInit, OnDestroy {
       try {
         await this.loadForEdit(this.editingOrderId);
       } catch {
-        this.errorMessage.set('Não foi possível carregar esta ordem de serviço.');
+        this.editLoadFailed.set(true);
       } finally {
         this.initialLoading.set(false);
       }
