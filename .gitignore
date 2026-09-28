@@ -47,6 +47,11 @@ testem.log
 .vercel
 __screenshots__/
 
+# Saída do Playwright (npm run e2e)
+/test-results
+/playwright-report
+/playwright/.cache
+
 # System files
 .DS_Store
 Thumbs.db
