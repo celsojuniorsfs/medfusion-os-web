@@ -2,6 +2,11 @@ import { Component, computed, input, output, viewChild } from '@angular/core';
 import { BrnAlertDialog, BrnAlertDialogImports } from '@spartan-ng/brain/alert-dialog';
 import { SpinnerComponent } from './spinner.component';
 
+const CONFIRM_BASE =
+  'inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-medium disabled:pointer-events-none disabled:opacity-50';
+const CONFIRM_DESTRUCTIVE = CONFIRM_BASE + ' bg-destructive text-destructive-foreground hover:bg-destructive/90';
+const CONFIRM_PRIMARY = CONFIRM_BASE + ' bg-primary text-primary-foreground hover:bg-primary/90';
+
 /**
  * Confirmação destrutiva estilizada — substitui o confirm() nativo do navegador. Genérico (não é
  * específico de nenhuma feature): quem usa controla o conteúdo via inputs e chama open()/close()
@@ -25,6 +30,7 @@ import { SpinnerComponent } from './spinner.component';
           @if (description()) {
             <p brnAlertDialogDescription class="mt-2 text-sm text-muted-foreground">{{ description() }}</p>
           }
+          <ng-content />
           <div class="mt-4 flex justify-end gap-2">
             <button
               type="button"
@@ -35,9 +41,9 @@ import { SpinnerComponent } from './spinner.component';
             </button>
             <button
               type="button"
-              [disabled]="pending()"
+              [disabled]="pending() || confirmDisabled()"
               (click)="confirmed.emit()"
-              class="inline-flex h-10 items-center gap-2 rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
+              [class]="confirmClass()"
             >
               @if (pending()) {
                 <ui-spinner />
@@ -56,7 +62,13 @@ export class ConfirmDialogComponent {
   confirmLabel = input('Confirmar');
   cancelLabel = input('Cancelar');
   pending = input(false);
+  confirmDisabled = input(false);
+  tone = input<'destructive' | 'primary'>('destructive');
   confirmed = output<void>();
+
+  protected readonly confirmClass = computed(() =>
+    this.tone() === 'primary' ? CONFIRM_PRIMARY : CONFIRM_DESTRUCTIVE,
+  );
 
   private readonly dialog = viewChild.required<BrnAlertDialog>('dialog');
   protected readonly state = computed(() => this.dialog().stateComputed());

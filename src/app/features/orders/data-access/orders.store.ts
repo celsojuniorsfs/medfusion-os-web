@@ -177,6 +177,20 @@ export const OrdersStore = signalStore(
         return response.data;
       },
 
+      /**
+       * Reabre uma OS concluída em garantia: `warranty_repair` primeiro, e só então a situação do
+       * equipamento com retrabalho volta a pendente — a API recusa (409) mexer na situação de uma
+       * OS `completed`. Nada pode ficar entre os dois passos: com a OS em `warranty_repair` e todos
+       * os equipamentos ainda resolvidos, qualquer chamada que re-derive o status (um PUT, uma
+       * situação sem mudança) devolve a OS pra `completed`. Se o segundo passo falhar, a OS fica
+       * em `warranty_repair` com tudo resolvido e o erro propaga.
+       */
+      async reopenInWarranty(id: string, orderEquipmentIds: string[]): Promise<Order> {
+        await this.changeStatus(id, 'warranty_repair');
+
+        return this.changeEquipmentsSituation(id, orderEquipmentIds, 'in_analysis');
+      },
+
       async findOne(id: string): Promise<Order> {
         const response = await firstValueFrom(
           http.get<{ data: Order }>(`${environment.apiUrl}/orders/${id}`),

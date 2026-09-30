@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideBan, LucideDownload } from '@lucide/angular';
+import { LucideBan, LucideDownload, LucideRotateCcw } from '@lucide/angular';
 import { toast } from '@spartan-ng/brain/sonner';
 import { CardComponent } from '../../../shared/ui/card.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
@@ -38,6 +38,7 @@ import { OrdersStore } from '../data-access/orders.store';
     DecimalPipe,
     LucideBan,
     LucideDownload,
+    LucideRotateCcw,
   ],
   templateUrl: './order-detail.page.html',
 })
@@ -50,7 +51,10 @@ export class OrderDetailPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly pdfBusy = signal(false);
   protected readonly canceling = signal(false);
-  private readonly cancelDialog = viewChild.required(ConfirmDialogComponent);
+  protected readonly reopening = signal(false);
+  protected readonly reopenChecked = signal<ReadonlySet<string>>(new Set());
+  private readonly cancelDialog = viewChild.required<ConfirmDialogComponent>('cancelDialog');
+  private readonly warrantyDialog = viewChild.required<ConfirmDialogComponent>('warrantyDialog');
 
   protected readonly orderStatusLabel = orderStatusLabel;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
@@ -143,6 +147,42 @@ export class OrderDetailPage implements OnInit {
       toast.error('Não foi possível cancelar a OS. Tente novamente.');
     } finally {
       this.canceling.set(false);
+    }
+  }
+
+  requestReopen(): void {
+    this.reopenChecked.set(new Set());
+    this.warrantyDialog().open();
+  }
+
+  toggleReopen(id: string, checked: boolean): void {
+    this.reopenChecked.update((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+
+      return next;
+    });
+  }
+
+  async confirmReopen(): Promise<void> {
+    const order = this.order();
+    const ids = [...this.reopenChecked()];
+    if (!order || ids.length === 0) return;
+
+    this.reopening.set(true);
+    try {
+      await this.store.reopenInWarranty(order.id, ids);
+      this.warrantyDialog().close();
+      this.reopenChecked.set(new Set());
+      toast.success('OS reaberta em garantia.');
+    } catch {
+      this.warrantyDialog().close();
+      // Se o primeiro passo passou e o segundo não, a OS já está em garantia (e editável): o
+      // usuário termina pelo select de situação do equipamento.
+      toast.error('Não foi possível reabrir a OS em garantia. Confira o status da OS e tente novamente.');
+    } finally {
+      this.reopening.set(false);
     }
   }
 

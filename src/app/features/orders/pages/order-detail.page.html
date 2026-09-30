@@ -254,6 +254,16 @@
     }
 
     <div class="flex max-w-2xl flex-col gap-2 sm:flex-row sm:justify-end">
+      @if (order.status === 'completed') {
+        <button
+          type="button"
+          (click)="requestReopen()"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
+        >
+          <svg lucideRotateCcw [size]="16"></svg>
+          Reabrir em garantia
+        </button>
+      }
       @if (order.status && isOrderCancelable(order.status)) {
         <button
           type="button"
@@ -280,11 +290,39 @@
     </div>
 
     <ui-confirm-dialog
+      #cancelDialog
       title="Cancelar OS"
       description="Cancelar esta OS? Essa ação não pode ser desfeita."
       confirmLabel="Cancelar OS"
       [pending]="canceling()"
       (confirmed)="confirmCancel()"
     />
+
+    <ui-confirm-dialog
+      #warrantyDialog
+      title="Reabrir em garantia"
+      description="Selecione os equipamentos que voltam para análise."
+      confirmLabel="Reabrir"
+      tone="primary"
+      [pending]="reopening()"
+      [confirmDisabled]="reopenChecked().size === 0"
+      (confirmed)="confirmReopen()"
+    >
+      <ul class="mt-3 flex max-h-60 flex-col gap-2 overflow-y-auto">
+        @for (equipment of order.equipments; track equipment.id) {
+          <li>
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-input"
+                [checked]="reopenChecked().has(equipment.id!)"
+                (change)="toggleReopen(equipment.id!, $any($event.target).checked)"
+              />
+              {{ equipment.name }}
+            </label>
+          </li>
+        }
+      </ul>
+    </ui-confirm-dialog>
   }
 </div>
