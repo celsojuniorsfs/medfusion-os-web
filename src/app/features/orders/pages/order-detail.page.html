@@ -16,14 +16,19 @@
     <ui-card class="flex max-w-2xl flex-col gap-4 p-4 md:p-6">
       <div class="flex flex-col gap-1.5">
         <span class="text-xs font-medium uppercase text-muted-foreground">Situação</span>
-        @if (order.status) {
-          <span
-            class="inline-flex h-6 w-fit items-center whitespace-nowrap rounded-full px-2.5 text-xs font-medium"
-            [class]="orderStatusBadgeClass(order.status)"
-          >
-            {{ orderStatusLabel(order.status) }}
-          </span>
-        }
+        <div class="flex flex-wrap items-center gap-2">
+          @if (order.status) {
+            <span
+              class="inline-flex h-6 w-fit items-center whitespace-nowrap rounded-full px-2.5 text-xs font-medium"
+              [class]="orderStatusBadgeClass(order.status)"
+            >
+              {{ orderStatusLabel(order.status) }}
+            </span>
+          }
+          @if (progress(); as progress) {
+            <span class="text-sm text-muted-foreground">{{ progress.resolved }} de {{ progress.total }} concluídos</span>
+          }
+        </div>
       </div>
 
       <div class="flex flex-col gap-1.5 border-t border-border pt-4">
@@ -42,22 +47,85 @@
       </div>
 
       <div class="flex flex-col gap-2 border-t border-border pt-4">
-        <span class="text-xs font-medium uppercase text-muted-foreground">Equipamentos</span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-medium uppercase text-muted-foreground">Equipamentos</span>
+          @if (editable() && (order.equipments?.length ?? 0) > 1) {
+            <label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-input"
+                [checked]="allSelected()"
+                (change)="toggleAll($any($event.target).checked)"
+              />
+              Selecionar todos
+            </label>
+          }
+        </div>
         <ul class="flex flex-col gap-1.5">
-          @for (equipment of order.equipments; track $index) {
+          @for (equipment of order.equipments; track equipment.id) {
             <li class="rounded-md border border-input px-3 py-2 text-sm">
-              <span class="font-medium">
-                {{ equipment.name }}
-                @if (equipment.brand) {
-                  · {{ equipment.brand }}
+              <div class="flex items-start gap-2">
+                @if (editable()) {
+                  <input
+                    type="checkbox"
+                    class="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+                    [attr.aria-label]="'Selecionar ' + equipment.name"
+                    [checked]="selected().has(equipment.id!)"
+                    (change)="toggleSelected(equipment.id!, $any($event.target).checked)"
+                  />
                 }
-                @if (equipment.model) {
-                  · {{ equipment.model }}
+                <div class="min-w-0 flex-1">
+                  <span class="font-medium">
+                    {{ equipment.name }}
+                    @if (equipment.brand) {
+                      · {{ equipment.brand }}
+                    }
+                    @if (equipment.model) {
+                      · {{ equipment.model }}
+                    }
+                  </span>
+                  @if (equipment.serial_number) {
+                    <span class="text-muted-foreground"> · Nº série {{ equipment.serial_number }}</span>
+                  }
+                  @if (equipment.preventive_maintenance || equipment.calibration) {
+                    <div class="mt-1 flex flex-wrap gap-1.5">
+                      @if (equipment.preventive_maintenance) {
+                        <span class="inline-flex h-5 items-center rounded-full bg-primary/15 px-2 text-xs font-medium text-primary">
+                          Preventiva
+                        </span>
+                      }
+                      @if (equipment.calibration) {
+                        <span class="inline-flex h-5 items-center rounded-full bg-violet-100 px-2 text-xs font-medium text-violet-700">
+                          Calibração
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (equipment.situation; as situation) {
+                  @if (editable()) {
+                    <select
+                      #situationSelect
+                      class="h-9 shrink-0 rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      [attr.aria-label]="'Situação de ' + equipment.name"
+                      [disabled]="applying()"
+                      [value]="situation"
+                      (change)="changeOne(equipment, situationSelect)"
+                    >
+                      @for (option of situations; track option) {
+                        <option [value]="option" [selected]="option === situation">{{ situationLabel(option) }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span
+                      class="inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-xs font-medium"
+                      [class]="situationBadgeClass(situation)"
+                    >
+                      {{ situationLabel(situation) }}
+                    </span>
+                  }
                 }
-              </span>
-              @if (equipment.serial_number) {
-                <span class="text-muted-foreground"> · Nº série {{ equipment.serial_number }}</span>
-              }
+              </div>
               @if (equipment.accessories?.length) {
                 <p class="mt-0.5 text-muted-foreground">Acessórios:</p>
                 <ul class="text-muted-foreground">
@@ -144,6 +212,46 @@
         </div>
       </div>
     </ui-card>
+
+    @if (selected().size > 0) {
+      <div
+        class="sticky bottom-4 z-20 flex max-w-2xl flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 shadow-lg"
+        role="region"
+        aria-label="Ação em lote"
+      >
+        <span class="text-sm font-medium">{{ selected().size }} selecionado(s)</span>
+        <select
+          class="h-9 rounded-md border border-input bg-input-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          aria-label="Situação a aplicar"
+          [disabled]="applying()"
+          [value]="bulkSituation()"
+          (change)="bulkSituation.set($any($event.target).value)"
+        >
+          @for (option of situations; track option) {
+            <option [value]="option">{{ situationLabel(option) }}</option>
+          }
+        </select>
+        <button
+          type="button"
+          [disabled]="applying()"
+          (click)="applyToSelected()"
+          class="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        >
+          @if (applying()) {
+            <ui-spinner />
+          }
+          Aplicar
+        </button>
+        <button
+          type="button"
+          [disabled]="applying()"
+          (click)="clearSelection()"
+          class="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
+        >
+          Limpar
+        </button>
+      </div>
+    }
 
     <div class="flex max-w-2xl flex-col gap-2 sm:flex-row sm:justify-end">
       @if (order.status && isOrderCancelable(order.status)) {

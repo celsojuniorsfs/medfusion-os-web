@@ -130,6 +130,11 @@
                   {{ orderStatusLabel(order.status) }}
                 </span>
               }
+              @if (resolvedProgress(order); as progress) {
+                <span class="text-xs text-muted-foreground" [attr.title]="progress.resolved + ' de ' + progress.total + ' concluídos'">
+                  {{ progress.resolved }} de {{ progress.total }}
+                </span>
+              }
               <button
                 type="button"
                 [disabled]="!!pdfBusyId()"
@@ -205,6 +210,11 @@
                       [class]="orderStatusBadgeClass(order.status)"
                     >
                       {{ orderStatusLabel(order.status) }}
+                    </span>
+                  }
+                  @if (resolvedProgress(order); as progress) {
+                    <span class="ml-2 text-xs text-muted-foreground" [attr.title]="progress.resolved + ' de ' + progress.total + ' concluídos'">
+                      {{ progress.resolved }} de {{ progress.total }}
                     </span>
                   }
                 </td>

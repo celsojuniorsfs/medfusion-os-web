@@ -13,6 +13,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { components } from '../../../core/api-types';
 import { AuthSessionStore } from '../../../core/auth/auth-session.store';
+import { EquipmentSituation } from './equipment-situation';
 
 type Order = components['schemas']['Order'] & { id: string };
 type OrderInput = components['schemas']['OrderInput'];
@@ -147,6 +148,28 @@ export const OrdersStore = signalStore(
       async changeStatus(id: string, status: OrderStatus): Promise<Order> {
         const response = await firstValueFrom(
           http.patch<{ data: Order }>(`${environment.apiUrl}/orders/${id}/status`, { status }),
+        );
+
+        patchState(store, upsertEntity(response.data));
+
+        return response.data;
+      },
+
+      /**
+       * PATCH /orders/{id}/equipments/situation — um ou vários equipamentos de uma vez. Os ids são
+       * `order_equipments.id` da OS já carregada (mudam a cada PUT). 409 se a OS não é mais
+       * editável; quem chama trata o erro.
+       */
+      async changeEquipmentsSituation(
+        id: string,
+        orderEquipmentIds: string[],
+        situation: EquipmentSituation,
+      ): Promise<Order> {
+        const response = await firstValueFrom(
+          http.patch<{ data: Order }>(`${environment.apiUrl}/orders/${id}/equipments/situation`, {
+            order_equipment_ids: orderEquipmentIds,
+            situation,
+          }),
         );
 
         patchState(store, upsertEntity(response.data));
