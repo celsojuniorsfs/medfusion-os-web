@@ -117,6 +117,25 @@ describe('AlertsStore', () => {
     expect(store.count()).toBe(1);
   });
 
+  it('markContacted() is not undone by a load() that was already in flight', async () => {
+    await signIn('administrative');
+    const store = TestBed.inject(AlertsStore);
+    const firstLoad = store.load();
+    httpMock.expectOne(URL).flush({ data: [anAlert('a1'), anAlert('a2')] });
+    await firstLoad;
+
+    const staleLoad = store.load();
+    const staleRequest = httpMock.expectOne(URL);
+    const contacted = store.markContacted('a1');
+    httpMock.expectOne(`${URL}/revisions/a1/contacted`).flush({ data: {} });
+    await contacted;
+    staleRequest.flush({ data: [anAlert('a1'), anAlert('a2')] });
+    await staleLoad;
+
+    expect(store.entities().map((alert) => alert.id)).toEqual(['a2']);
+    expect(store.loading()).toBe(false);
+  });
+
   it('is emptied when the session ends', async () => {
     await signIn('administrative');
     const store = TestBed.inject(AlertsStore);

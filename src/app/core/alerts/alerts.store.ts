@@ -63,7 +63,9 @@ export const AlertsStore = signalStore(
           http.patch(`${environment.apiUrl}/alerts/revisions/${id}/contacted`, {}),
         );
 
-        patchState(store, removeEntity(id));
+        // Invalida um load() em voo: a resposta dele ainda traz o alerta que acabou de sair.
+        loadRequestId++;
+        patchState(store, removeEntity(id), { loading: false });
       },
 
       reset(): void {
