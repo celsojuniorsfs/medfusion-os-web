@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { LucideClipboardList, LucideStethoscope, LucideUsers, provideLucideIcons } from '@lucide/angular';
+import { LucideBell, LucideClipboardList, LucideStethoscope, LucideUsers, provideLucideIcons } from '@lucide/angular';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
@@ -15,6 +15,6 @@ export const appConfig: ApplicationConfig = {
     // ícones usados *dinamicamente* (nome vindo de uma variável, não fixo no template) precisam
     // estar registrados aqui, pro `LucideDynamicIcon` conseguir resolver pelo nome — hoje só o
     // menu lateral do shell faz isso (`item.icon` vindo do array `navItems`).
-    provideLucideIcons(LucideUsers, LucideClipboardList, LucideStethoscope),
+    provideLucideIcons(LucideUsers, LucideClipboardList, LucideStethoscope, LucideBell),
   ],
 };

@@ -1,16 +1,21 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkMenuModule } from '@angular/cdk/menu';
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LucideChevronDown, LucideDynamicIcon, LucideLogOut, LucideMenu, LucideX } from '@lucide/angular';
 import { map } from 'rxjs';
+import { ALERT_ROLES } from '../alerts/alerts';
+import { AlertsStore } from '../alerts/alerts.store';
 import { AuthSessionStore } from '../auth/auth-session.store';
+import { UserRole } from '../auth/user-role';
+import { AlertsBellComponent } from './alerts-bell.component';
 
 interface NavItem {
   path: string;
   label: string;
   icon: string;
+  roles?: UserRole[];
 }
 
 /**
@@ -30,11 +35,13 @@ interface NavItem {
     LucideChevronDown,
     LucideLogOut,
     LucideDynamicIcon,
+    AlertsBellComponent,
   ],
   templateUrl: './shell.component.html',
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit {
   protected readonly auth = inject(AuthSessionStore);
+  private readonly alerts = inject(AlertsStore);
   private readonly breakpointObserver = inject(BreakpointObserver);
 
   private readonly menuButton = viewChild.required<ElementRef<HTMLButtonElement>>('menuButton');
@@ -44,7 +51,14 @@ export class ShellComponent {
     { path: '/clients', label: 'Clientes', icon: 'users' },
     { path: '/equipamentos', label: 'Equipamentos', icon: 'stethoscope' },
     { path: '/orders', label: 'Ordens de Serviço', icon: 'clipboard-list' },
+    { path: '/alertas', label: 'Alertas', icon: 'bell', roles: ALERT_ROLES },
   ];
+
+  protected readonly visibleNavItems = computed(() => {
+    const role = this.auth.user()?.role;
+
+    return this.navItems.filter((item) => !item.roles || (role !== undefined && item.roles.includes(role)));
+  });
 
   protected readonly userInitial = computed(() => this.auth.user()?.name?.charAt(0).toUpperCase() ?? '?');
 
@@ -62,6 +76,10 @@ export class ShellComponent {
   );
 
   protected readonly sidebarInert = computed(() => this.isMobile() && !this.sidebarOpen());
+
+  ngOnInit(): void {
+    void this.alerts.load();
+  }
 
   protected toggleSidebar(): void {
     this.sidebarOpen.update((open) => !open);

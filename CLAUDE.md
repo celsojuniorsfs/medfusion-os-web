@@ -58,6 +58,10 @@ passar a importar `EquipmentsStore`/`ClientsStore` de verdade, vale repetir o te
 deleção (apagar `features/clients/`, rodar `ng build`) pra confirmar que só esses imports
 de store quebram — nada mais.
 
+Caso concreto: o store de alertas (`core/alerts/alerts.store.ts`) mora em `core/` porque o sino
+fica no header do shell (`core/layout`); só a página `/alertas` é feature (`features/alerts/`) e
+importa o store do core, que é a direção permitida.
+
 ## Testando SignalStore + localStorage: a leitura só acontece na construção
 
 `AuthSessionStore` lê o token do `localStorage` dentro do inicializador de `withState`

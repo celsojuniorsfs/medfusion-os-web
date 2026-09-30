@@ -1,5 +1,7 @@
 import { RedirectFunction, Routes } from '@angular/router';
+import { ALERT_ROLES } from './core/alerts/alerts';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { ShellComponent } from './core/layout/shell.component';
 
 /**
@@ -36,6 +38,11 @@ export const routes: Routes = [
       {
         path: 'equipamentos',
         loadChildren: () => import('./features/catalog/catalog.routes').then((m) => m.CATALOG_ROUTES),
+      },
+      {
+        path: 'alertas',
+        canActivate: [roleGuard(...ALERT_ROLES)],
+        loadChildren: () => import('./features/alerts/alerts.routes').then((m) => m.ALERTS_ROUTES),
       },
     ],
   },
