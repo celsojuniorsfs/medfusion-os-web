@@ -1,0 +1,72 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <h1 class="text-xl font-semibold">Alertas</h1>
+    <p class="text-sm text-muted-foreground">Pendências que pedem uma ação sua.</p>
+  </div>
+
+  @if (store.loading() && store.count() === 0) {
+    <ui-card>
+      <div class="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+        <ui-spinner /> Carregando...
+      </div>
+    </ui-card>
+  } @else if (store.error()) {
+    <ui-card
+      ><p class="p-6 text-sm text-destructive">{{ store.error() }}</p></ui-card
+    >
+  } @else if (store.count() === 0) {
+    <ui-card><p class="p-6 text-sm text-muted-foreground">Nenhum alerta pendente.</p></ui-card>
+  } @else {
+    <div class="flex flex-col gap-3">
+      @for (alert of store.entities(); track alert.id) {
+        <ui-card class="p-4">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex min-w-0 flex-col gap-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="inline-flex h-5 items-center whitespace-nowrap rounded-full px-2 text-xs font-medium"
+                  [class]="typeBadgeClass[alert.type]"
+                >
+                  {{ typeLabels[alert.type] }}
+                </span>
+                @if (alert.billing_notified_at) {
+                  <span
+                    class="inline-flex h-5 items-center whitespace-nowrap rounded-full bg-destructive/15 px-2 text-xs font-medium text-destructive"
+                  >
+                    Sem contato há mais de 7 dias
+                  </span>
+                }
+              </div>
+              <a [routerLink]="alertLink(alert)" class="font-medium hover:underline">{{
+                alert.title
+              }}</a>
+              <span class="text-sm text-muted-foreground">
+                {{ alert.order?.client_name || 'Cliente não informado' }} · avisado em
+                {{ alert.notified_at | date: 'dd/MM/yyyy' }}
+              </span>
+            </div>
+
+            @if (alert.type === 'equipment_revision') {
+              <button
+                type="button"
+                (click)="askContacted(alert)"
+                class="inline-flex h-10 shrink-0 items-center rounded-md border border-input px-4 text-sm font-medium hover:bg-accent"
+              >
+                Cliente contatado
+              </button>
+            }
+          </div>
+        </ui-card>
+      }
+    </div>
+  }
+</div>
+
+<ui-confirm-dialog
+  #contactedDialog
+  title="Marcar cliente como contatado?"
+  description="Não dá para desfazer. O alerta sai da lista e a cobrança de 7 dias deixa de valer."
+  confirmLabel="Marcar como contatado"
+  [pending]="pending()"
+  (confirmed)="confirmContacted()"
+/>
