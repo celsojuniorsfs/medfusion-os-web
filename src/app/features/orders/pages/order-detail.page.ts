@@ -80,8 +80,11 @@ export class OrderDetailPage implements OnInit {
   private readonly checked = signal<ReadonlySet<string>>(new Set());
 
   // Cruzado com os ids atuais: um PUT recria `order_equipments` com ids novos, e um id que sumiu
-  // não pode ficar contando como selecionado.
+  // não pode ficar contando como selecionado. Vazio quando a OS deixa de ser editável (o último
+  // equipamento concluiu e a API concluiu a OS): os checkboxes somem e a barra ficaria sem saída.
   protected readonly selected = computed(() => {
+    if (!this.editable()) return new Set<string>();
+
     const ids = new Set((this.order()?.equipments ?? []).map((equipment) => equipment.id));
 
     return new Set([...this.checked()].filter((id) => ids.has(id)));
