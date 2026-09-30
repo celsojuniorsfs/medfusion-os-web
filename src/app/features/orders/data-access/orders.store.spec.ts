@@ -21,7 +21,7 @@ const minimalOrderInput = (): OrderInput => ({
   on_site_quote: false,
   rental: false,
   labor_cost: 100,
-  equipments: [{ equipment_id: 'equipment-1' }],
+  equipments: [{ equipment_id: 'equipment-1', preventive_maintenance: false, calibration: false }],
   items: [],
 });
 
