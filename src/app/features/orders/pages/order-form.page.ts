@@ -530,7 +530,9 @@ export class OrderFormPage implements OnInit, OnDestroy {
     const toAccessories = (draft: EquipmentDraft): OrderEquipmentAccessory[] =>
       draft.accessories.map(({ name, quantity }) => ({ name, quantity }));
     // preventive_maintenance/calibration por equipamento (api#146) ainda não têm campo no form
-    // (web#133) — mandam false, o mesmo que a API assumia quando o campo não vinha.
+    // (web#133) — mandam false, o mesmo que a API assumia quando o campo não vinha. Vale também
+    // na edição: a API não preserva o valor anterior, então salvar uma OS por aqui zera flags
+    // que tenham sido marcadas direto pela API, até a web#133 trazer o campo de verdade.
     const equipments: OrderInput['equipments'] = this.equipmentDrafts().map((draft) =>
       draft.kind === 'existing'
         ? {
