@@ -191,6 +191,49 @@ describe('OrdersStore', () => {
     await expect(promise).rejects.toMatchObject({ status: 409 });
   });
 
+  it('reopenInWarranty() moves the order to warranty_repair and only then reopens the equipment', async () => {
+    const store = TestBed.inject(OrdersStore);
+    const base = `${environment.apiUrl}/orders/order-1`;
+
+    const promise = store.reopenInWarranty('order-1', ['oe-2']);
+    const statusRequest = httpMock.expectOne(`${base}/status`);
+    expect(statusRequest.request.body).toEqual({ status: 'warranty_repair' });
+    httpMock.expectNone(`${base}/equipments/situation`);
+    statusRequest.flush({ data: { ...anOrder(), status: 'warranty_repair' } });
+    await new Promise((resolve) => setTimeout(resolve));
+
+    const situationRequest = httpMock.expectOne(`${base}/equipments/situation`);
+    expect(situationRequest.request.body).toEqual({ order_equipment_ids: ['oe-2'], situation: 'in_analysis' });
+    situationRequest.flush({ data: { ...anOrder(), status: 'warranty_repair' } });
+    await promise;
+
+    expect(store.entityMap()['order-1']?.status).toBe('warranty_repair');
+  });
+
+  it('reopenInWarranty() does not touch the equipment when the status change is refused', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.reopenInWarranty('order-1', ['oe-2']);
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders/order-1/status`)
+      .flush({ message: 'A transição de status solicitada não é permitida.' }, { status: 422, statusText: 'Unprocessable' });
+
+    await expect(promise).rejects.toMatchObject({ status: 422 });
+    httpMock.expectNone(`${environment.apiUrl}/orders/order-1/equipments/situation`);
+  });
+
+  it('reopenInWarranty() propagates the error when the equipment step fails', async () => {
+    const store = TestBed.inject(OrdersStore);
+    const base = `${environment.apiUrl}/orders/order-1`;
+
+    const promise = store.reopenInWarranty('order-1', ['oe-2']);
+    httpMock.expectOne(`${base}/status`).flush({ data: { ...anOrder(), status: 'warranty_repair' } });
+    await new Promise((resolve) => setTimeout(resolve));
+    httpMock.expectOne(`${base}/equipments/situation`).flush({ message: 'erro' }, { status: 500, statusText: 'Server Error' });
+
+    await expect(promise).rejects.toMatchObject({ status: 500 });
+  });
+
   it('generatePdf() posts to /orders/{id}/pdf and returns the signed url', async () => {
     const store = TestBed.inject(OrdersStore);
 
