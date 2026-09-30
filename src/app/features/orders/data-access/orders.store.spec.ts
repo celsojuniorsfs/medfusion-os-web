@@ -167,6 +167,30 @@ describe('OrdersStore', () => {
     expect(store.page()).toBe(1);
   });
 
+  it('changeEquipmentsSituation() patches the ids and replaces the order in the store', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.changeEquipmentsSituation('order-1', ['oe-1', 'oe-2'], 'completed');
+    const request = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/equipments/situation`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ order_equipment_ids: ['oe-1', 'oe-2'], situation: 'completed' });
+    request.flush({ data: { ...anOrder(), status: 'partially_completed' } });
+    await promise;
+
+    expect(store.entityMap()['order-1']?.status).toBe('partially_completed');
+  });
+
+  it('changeEquipmentsSituation() propagates a 409 instead of swallowing it', async () => {
+    const store = TestBed.inject(OrdersStore);
+
+    const promise = store.changeEquipmentsSituation('order-1', ['oe-1'], 'completed');
+    httpMock
+      .expectOne(`${environment.apiUrl}/orders/order-1/equipments/situation`)
+      .flush({ message: 'OS com status "completed" não pode mais ser editada.' }, { status: 409, statusText: 'Conflict' });
+
+    await expect(promise).rejects.toMatchObject({ status: 409 });
+  });
+
   it('generatePdf() posts to /orders/{id}/pdf and returns the signed url', async () => {
     const store = TestBed.inject(OrdersStore);
 

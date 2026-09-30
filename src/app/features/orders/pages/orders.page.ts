@@ -9,6 +9,7 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.compon
 import { PaginationComponent } from '../../../shared/ui/pagination.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { ClientsStore } from '../../clients/data-access/clients.store';
+import { resolvedProgress } from '../data-access/equipment-situation';
 import { formatDateBr } from '../data-access/local-date';
 import { openOrderPdf } from '../data-access/open-order-pdf';
 import {
@@ -54,6 +55,7 @@ export class OrdersPage implements OnInit, OnDestroy {
   protected readonly store = inject(OrdersStore);
   protected readonly clientsStore = inject(ClientsStore);
   protected readonly orderStatusLabel = orderStatusLabel;
+  protected readonly resolvedProgress = resolvedProgress;
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
   protected readonly isOrderEditable = isOrderEditable;
   protected readonly isOrderCancelable = isOrderCancelable;

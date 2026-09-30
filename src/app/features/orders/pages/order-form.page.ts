@@ -32,8 +32,16 @@ interface AccessoryEditorState {
 
 const EMPTY_ACCESSORY_EDITOR: AccessoryEditorState = { accessories: [], newAccessoryName: '', newAccessoryQuantity: 1 };
 
+/** Preventiva e calibração são por equipamento (api#146), não da OS. */
+interface EquipmentFlags {
+  preventive_maintenance: boolean;
+  calibration: boolean;
+}
+
+const NO_EQUIPMENT_FLAGS: EquipmentFlags = { preventive_maintenance: false, calibration: false };
+
 /** Uma linha "do catálogo do cliente" na lista de equipamentos da OS — vira `{ equipment_id, accessories }`. */
-interface ExistingEquipmentDraft extends AccessoryEditorState {
+interface ExistingEquipmentDraft extends AccessoryEditorState, EquipmentFlags {
   kind: 'existing';
   equipment_id: string;
   name: string;
@@ -43,7 +51,7 @@ interface ExistingEquipmentDraft extends AccessoryEditorState {
 }
 
 /** Uma linha "novo equipamento" — a API cadastra no catálogo do cliente na mesma chamada. */
-interface NewEquipmentDraft extends AccessoryEditorState {
+interface NewEquipmentDraft extends AccessoryEditorState, EquipmentFlags {
   kind: 'new';
   name: string;
   brand: string;
@@ -74,6 +82,7 @@ function toExistingDraft(equipment: Equipment): ExistingEquipmentDraft {
     brand: equipment.brand ?? null,
     model: equipment.model ?? null,
     serial_number: equipment.serial_number ?? null,
+    ...NO_EQUIPMENT_FLAGS,
     ...EMPTY_ACCESSORY_EDITOR,
     accessories: (equipment.accessories ?? []).map((accessory) => ({
       name: accessory.name ?? '',
@@ -92,6 +101,11 @@ function toEditDraft(snapshot: OrderEquipmentSnapshot): EquipmentDraft {
     name: accessory.name,
     quantity: accessory.quantity,
   }));
+  // A API não preserva as flags num PUT (vêm do payload), então a edição precisa reenviar as salvas.
+  const flags: EquipmentFlags = {
+    preventive_maintenance: snapshot.preventive_maintenance ?? false,
+    calibration: snapshot.calibration ?? false,
+  };
 
   if (snapshot.equipment_id) {
     return {
@@ -101,6 +115,7 @@ function toEditDraft(snapshot: OrderEquipmentSnapshot): EquipmentDraft {
       brand: snapshot.brand ?? null,
       model: snapshot.model ?? null,
       serial_number: snapshot.serial_number ?? null,
+      ...flags,
       ...EMPTY_ACCESSORY_EDITOR,
       accessories,
     };
@@ -117,6 +132,7 @@ function toEditDraft(snapshot: OrderEquipmentSnapshot): EquipmentDraft {
     model: snapshot.model ?? '',
     serial_number: snapshot.serial_number ?? '',
     asset_tag: snapshot.asset_tag ?? '',
+    ...flags,
     ...EMPTY_ACCESSORY_EDITOR,
     accessories,
   };
@@ -424,6 +440,10 @@ export class OrderFormPage implements OnInit, OnDestroy {
     this.equipmentDrafts.update((current) => current.map((draft, i) => (i === index ? fn(draft) : draft)));
   }
 
+  updateEquipmentFlag(index: number, flag: keyof EquipmentFlags, checked: boolean): void {
+    this.updateDraft(index, (draft) => ({ ...draft, [flag]: checked }));
+  }
+
   updateAccessoryEntry(index: number, patch: Partial<Pick<AccessoryEditorState, 'newAccessoryName' | 'newAccessoryQuantity'>>): void {
     this.updateDraft(index, (draft) => ({ ...draft, ...patch }));
   }
@@ -483,7 +503,10 @@ export class OrderFormPage implements OnInit, OnDestroy {
 
     this.equipmentsTouched.set(true);
     const raw = this.newEquipmentForm.getRawValue();
-    this.equipmentDrafts.update((current) => [...current, { kind: 'new', ...raw, ...EMPTY_ACCESSORY_EDITOR }]);
+    this.equipmentDrafts.update((current) => [
+      ...current,
+      { kind: 'new', ...raw, ...NO_EQUIPMENT_FLAGS, ...EMPTY_ACCESSORY_EDITOR },
+    ]);
     this.newEquipmentForm.reset({ name: '', brand: '', model: '', serial_number: '', asset_tag: '' });
     this.addingNewEquipment.set(false);
   }
@@ -529,16 +552,12 @@ export class OrderFormPage implements OnInit, OnDestroy {
     const raw = this.form.getRawValue();
     const toAccessories = (draft: EquipmentDraft): OrderEquipmentAccessory[] =>
       draft.accessories.map(({ name, quantity }) => ({ name, quantity }));
-    // preventive_maintenance/calibration por equipamento (api#146) ainda não têm campo no form
-    // (web#133) — mandam false, o mesmo que a API assumia quando o campo não vinha. Vale também
-    // na edição: a API não preserva o valor anterior, então salvar uma OS por aqui zera flags
-    // que tenham sido marcadas direto pela API, até a web#133 trazer o campo de verdade.
     const equipments: OrderInput['equipments'] = this.equipmentDrafts().map((draft) =>
       draft.kind === 'existing'
         ? {
             equipment_id: draft.equipment_id,
-            preventive_maintenance: false,
-            calibration: false,
+            preventive_maintenance: draft.preventive_maintenance,
+            calibration: draft.calibration,
             accessories: toAccessories(draft),
           }
         : {
@@ -547,8 +566,8 @@ export class OrderFormPage implements OnInit, OnDestroy {
             model: draft.model.trim() || null,
             serial_number: draft.serial_number.trim() || null,
             asset_tag: draft.asset_tag.trim() || null,
-            preventive_maintenance: false,
-            calibration: false,
+            preventive_maintenance: draft.preventive_maintenance,
+            calibration: draft.calibration,
             accessories: toAccessories(draft),
           },
     );

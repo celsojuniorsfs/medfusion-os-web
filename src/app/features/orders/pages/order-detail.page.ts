@@ -7,8 +7,15 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner.component';
 import { formatDateBr } from '../data-access/local-date';
+import {
+  EQUIPMENT_SITUATIONS,
+  EquipmentSituation,
+  equipmentSituationBadgeClass,
+  equipmentSituationLabel,
+  resolvedProgress,
+} from '../data-access/equipment-situation';
 import { openOrderPdf } from '../data-access/open-order-pdf';
-import { isOrderCancelable, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
+import { isOrderCancelable, isOrderEditable, orderStatusBadgeClass, orderStatusLabel } from '../data-access/order-status';
 import { OrdersStore } from '../data-access/orders.store';
 
 /**
@@ -49,8 +56,45 @@ export class OrderDetailPage implements OnInit {
   protected readonly orderStatusBadgeClass = orderStatusBadgeClass;
   protected readonly isOrderCancelable = isOrderCancelable;
   protected readonly formatDateBr = formatDateBr;
+  protected readonly situations = EQUIPMENT_SITUATIONS;
+  protected readonly situationLabel = equipmentSituationLabel;
+  protected readonly situationBadgeClass = equipmentSituationBadgeClass;
 
   protected readonly order = computed(() => this.store.entities().find((order) => order.id === this.orderId));
+
+  // A API recusa (409) mudar situação de OS cancelada/concluída/não aprovada.
+  protected readonly editable = computed(() => {
+    const order = this.order();
+
+    return !!order?.status && isOrderEditable(order.status);
+  });
+
+  protected readonly progress = computed(() => {
+    const order = this.order();
+
+    return order ? resolvedProgress(order) : null;
+  });
+
+  protected readonly applying = signal(false);
+  protected readonly bulkSituation = signal<EquipmentSituation>('in_analysis');
+  private readonly checked = signal<ReadonlySet<string>>(new Set());
+
+  // Cruzado com os ids atuais: um PUT recria `order_equipments` com ids novos, e um id que sumiu
+  // não pode ficar contando como selecionado. Vazio quando a OS deixa de ser editável (o último
+  // equipamento concluiu e a API concluiu a OS): os checkboxes somem e a barra ficaria sem saída.
+  protected readonly selected = computed(() => {
+    if (!this.editable()) return new Set<string>();
+
+    const ids = new Set((this.order()?.equipments ?? []).map((equipment) => equipment.id));
+
+    return new Set([...this.checked()].filter((id) => ids.has(id)));
+  });
+
+  protected readonly allSelected = computed(() => {
+    const total = this.order()?.equipments?.length ?? 0;
+
+    return total > 0 && this.selected().size === total;
+  });
 
   protected readonly attendanceTypes = computed(() => {
     const order = this.order();
@@ -99,6 +143,66 @@ export class OrderDetailPage implements OnInit {
       toast.error('Não foi possível cancelar a OS. Tente novamente.');
     } finally {
       this.canceling.set(false);
+    }
+  }
+
+  toggleSelected(id: string, checked: boolean): void {
+    this.checked.update((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+
+      return next;
+    });
+  }
+
+  toggleAll(checked: boolean): void {
+    const ids = (this.order()?.equipments ?? []).map((equipment) => equipment.id!);
+
+    this.checked.set(checked ? new Set(ids) : new Set());
+  }
+
+  clearSelection(): void {
+    this.checked.set(new Set());
+  }
+
+  async changeOne(equipment: { id?: string; situation?: EquipmentSituation }, select: HTMLSelectElement): Promise<void> {
+    const situation = select.value as EquipmentSituation;
+    if (!equipment.id || situation === equipment.situation) return;
+
+    // O select já mostra o valor escolhido; se a API recusar, o estado do store não muda e o
+    // Angular não redesenha, então o valor antigo precisa ser devolvido à mão.
+    if (!(await this.apply([equipment.id], situation))) {
+      select.value = equipment.situation ?? 'in_analysis';
+    }
+  }
+
+  async applyToSelected(): Promise<void> {
+    const ids = [...this.selected()];
+    if (ids.length === 0) return;
+
+    if (await this.apply(ids, this.bulkSituation())) {
+      this.clearSelection();
+    }
+  }
+
+  private async apply(ids: string[], situation: EquipmentSituation): Promise<boolean> {
+    this.applying.set(true);
+    try {
+      await this.store.changeEquipmentsSituation(this.orderId, ids, situation);
+      toast.success(ids.length === 1 ? 'Situação atualizada.' : `Situação atualizada em ${ids.length} equipamentos.`);
+
+      return true;
+    } catch (error) {
+      toast.error(
+        (error as { status?: number }).status === 409
+          ? 'Esta OS não aceita mais alterações.'
+          : 'Não foi possível atualizar a situação. Tente novamente.',
+      );
+
+      return false;
+    } finally {
+      this.applying.set(false);
     }
   }
 
